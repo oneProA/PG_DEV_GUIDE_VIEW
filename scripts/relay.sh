@@ -1,88 +1,114 @@
 #!/bin/bash
 
-# UTF-8 인코딩 설정
 export LC_ALL=en_US.UTF-8
 export LANG=en_US.UTF-8
 
-# --- 설정 가능한 변수 ---
 MISSION_FILE="MISSION.md"
 REPORT_FILE="MISSION_REPORT.md"
 CONVERSATION_LOG="conversation_log.md"
-# 윈도우 환경에서 안전한 실행을 위해 .cmd 경로를 직접 지정할 수 있습니다.
-CODEX_CLI_COMMAND="codex"
+CODEX_CLI_COMMAND="${CODEX_CLI_COMMAND:-}"
 
-# --- 디렉터리 경로 설정 ---
-# 현재 스크립트 파일이 있는 디렉터리 (예: C:	est\PG_DEV_GUIDE_VIEW\scripts)
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-# 프로젝트 루트 디렉터리 (scripts 디렉터리의 상위 디렉터리, 예: C:	est\PG_DEV_GUIDE_VIEW)
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# 파일 경로 설정 (프로젝트 루트 기준)
 MISSION_PATH="${PROJECT_ROOT}/${MISSION_FILE}"
 REPORT_PATH="${PROJECT_ROOT}/${REPORT_FILE}"
 CONVERSATION_LOG_PATH="${PROJECT_ROOT}/${CONVERSATION_LOG}"
+CODEX_RUNTIME_DIR="${PROJECT_ROOT}/.codex-runtime"
+CODEX_HOME_DIR="${CODEX_RUNTIME_DIR}/home"
+CODEX_TMP_DIR="${CODEX_RUNTIME_DIR}/tmp"
 
-# --- 함수 정의 ---
-
-# 로그 메시지 출력 함수
 log_message() {
   local message="$1"
-  # conversation_log.md 파일이 프로젝트 루트에 있다고 가정합니다.
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $message" | tee -a "$CONVERSATION_LOG_PATH"
 }
 
-# Codex CLI 실행 함수
-execute_codex_task() {
-  log_message "Codex CLI를 사용하여 작업을 실행합니다. Mission File: ${MISSION_PATH}"
+resolve_codex_command() {
+  local candidate=""
 
-  # 인자(Argument)로 넘기지 않고, 표준 입력 리다이렉션(<)을 사용하여 파일 내용을 직접 전달합니다.
-  # 이렇게 하면 쉘의 인자 처리 과정에서 발생하는 한글 깨짐을 방지할 수 있습니다.
-  ${CODEX_CLI_COMMAND} exec --sandbox workspace-write --skip-git-repo-check < "${MISSION_PATH}" > "$REPORT_PATH" 2>&1
+  if [ -n "$CODEX_CLI_COMMAND" ] && command -v "$CODEX_CLI_COMMAND" >/dev/null 2>&1; then
+    command -v "$CODEX_CLI_COMMAND"
+    return 0
+  fi
+
+  if command -v codex.exe >/dev/null 2>&1; then
+    command -v codex.exe
+    return 0
+  fi
+
+  if command -v codex >/dev/null 2>&1; then
+    candidate="$(command -v codex)"
+    case "$candidate" in
+      *.cmd|*.exe)
+        echo "$candidate"
+        return 0
+        ;;
+    esac
+  fi
+
+  if [ -n "$USERPROFILE" ]; then
+    candidate="${USERPROFILE}/.vscode/extensions/openai.chatgpt-26.323.20928-win32-x64/bin/windows-x86_64/codex.exe"
+    if [ -x "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+execute_codex_task() {
+  local resolved_codex=""
+  log_message "Executing Codex task. Mission file: ${MISSION_PATH}"
+
+  if ! resolved_codex="$(resolve_codex_command)"; then
+    log_message "Error: Unable to resolve a Codex CLI executable. Set CODEX_CLI_COMMAND if needed."
+    return 1
+  fi
+
+  log_message "Resolved Codex CLI: ${resolved_codex}"
+
+  mkdir -p "${CODEX_HOME_DIR}" "${CODEX_TMP_DIR}"
+
+  CODEX_HOME="${CODEX_HOME_DIR}" TMPDIR="${CODEX_TMP_DIR}" TMP="${CODEX_TMP_DIR}" TEMP="${CODEX_TMP_DIR}" \
+    "${resolved_codex}" exec --sandbox workspace-write --skip-git-repo-check < "${MISSION_PATH}" > "$REPORT_PATH" 2>&1
 
   local exit_code=$?
   if [ $exit_code -eq 0 ]; then
-    log_message "Codex 작업이 성공적으로 완료되었습니다. 결과: ${REPORT_PATH}"
+    log_message "Codex task completed successfully. Report: ${REPORT_PATH}"
     return 0
   else
-    log_message "Codex 작업 중 오류가 발생했습니다. Exit code: ${exit_code}. Report: ${REPORT_PATH}"
+    log_message "Codex task failed with exit code ${exit_code}. Report: ${REPORT_PATH}"
     return 1
   fi
 }
 
-# --- 메인 스크립트 로직 ---
+log_message "--- AI relay script started ---"
 
-log_message "--- AI 협업 릴레이 스크립트 시작 ---"
-
-# MISSION.md 파일 존재 여부 확인 (프로젝트 루트 기준)
 if [ ! -f "$MISSION_PATH" ]; then
-  log_message "오류: Mission file '${MISSION_FILE}'을(를) 찾을 수 없습니다. 프로젝트 루트 '${PROJECT_ROOT}'에 해당 파일이 있는지 확인해주세요."
+  log_message "Error: Mission file '${MISSION_FILE}' was not found in '${PROJECT_ROOT}'."
   exit 1
 fi
 
-# MISSION.md 파일 내용 읽기
 MISSION_CONTENT=$(cat "$MISSION_PATH")
 
-# MISSION.md 파일 내용이 비어있는지 확인
 if [ -z "$MISSION_CONTENT" ]; then
-  log_message "Mission file '${MISSION_FILE}'이(가) 비어 있습니다. 작업할 내용이 없습니다."
+  log_message "Mission file '${MISSION_FILE}' is empty. Nothing to do."
   exit 0
 fi
 
-# Codex 작업 실행
 if execute_codex_task "$MISSION_CONTENT"; then
-  # 작업 성공 시 처리: MISSION.md 파일을 성공 메시지와 보고서 내용으로 업데이트
   echo -e "
---- 작업 완료 (Codex) ---
+--- Task Complete (Codex) ---
 $(cat "$REPORT_PATH")" > "$MISSION_PATH"
-  log_message "MISSION.md 파일이 업데이트되었습니다."
+  log_message "MISSION.md was updated after a successful run."
 else
-  # 작업 실패 시 처리: MISSION.md 파일을 실패 메시지와 보고서 내용으로 업데이트
   echo -e "
---- 작업 실패 (Codex) ---
+--- Task Failed (Codex) ---
 $(cat "$REPORT_PATH")" > "$MISSION_PATH"
-  log_message "MISSION.md 파일이 작업 실패 상태로 업데이트되었습니다."
+  log_message "MISSION.md was updated after a failed run."
 fi
 
-log_message "--- AI 협업 릴레이 스크립트 종료 ---"
+log_message "--- AI relay script finished ---"
 
 exit 0
