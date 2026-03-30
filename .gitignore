@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -39,6 +38,18 @@ dist-ssr
 .codex-runtime/
 conversation_log.md
 MISSION_REPORT.md
-=======
+
 .vercel
->>>>>>> 40380379eb162dd0a92360bde6f6a04288703f46
+
+### Handoff & Mission ###
+GEMINI_CODEX_HANDOFF.md
+Codex_gemini_handoff.md
+MISSION.md
+MISSION_REPORT.md
+CODEX_RELAY_REPORT.md
+conversation_log.md
+.codex-runtime/
+
+### Test Artifacts ###
+playwright-report/
+test-results/
