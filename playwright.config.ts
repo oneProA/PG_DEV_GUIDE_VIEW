@@ -27,7 +27,7 @@ export default defineConfig({
       command: '.\\\\gradlew.bat bootRun --console=plain',
       cwd: path.resolve(__dirname, '..', 'PG_DEV_GUIDE_API'),
       url: 'http://localhost:8080/api/hello',
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       env: {
         GRADLE_USER_HOME: path.resolve(__dirname, '..', 'PG_DEV_GUIDE_API', '.gradle'),
       },
