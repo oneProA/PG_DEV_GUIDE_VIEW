@@ -23,7 +23,7 @@ const Playground: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight text-on-surface mb-2">API Playground</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-on-surface mb-2">API 테스트</h1>
         <p className="text-zinc-500 text-sm">CJ ONE 결제 API를 실시간으로 테스트하고 응답 데이터를 확인하세요.</p>
       </div>
 

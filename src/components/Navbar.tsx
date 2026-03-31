@@ -22,14 +22,7 @@ const Navbar: React.FC = () => {
             CJ PG Developer Center
           </Link>
           <div className="hidden md:flex gap-6">
-            <Link
-              to="/"
-              className={`${
-                isActive('/') ? 'text-[#e5004f] font-bold border-b-2 border-[#e5004f]' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100'
-              } pb-1 text-sm font-medium transition-colors`}
-            >
-              Home
-            </Link>
+
             <Link
               to="/api"
               className={`${

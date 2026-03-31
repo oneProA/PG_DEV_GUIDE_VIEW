@@ -12,8 +12,8 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="h-[calc(100vh-64px)] w-64 sticky top-16 hidden md:flex flex-col p-4 space-y-2 border-r border-zinc-200/20 dark:border-zinc-800/20 bg-zinc-50 dark:bg-zinc-900 font-body text-sm leading-relaxed">
       <div className="mb-6 px-2">
-        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100">Admin Console</h3>
-        <p className="text-xs text-zinc-500">시스템 관리자</p>
+        <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">API Reference</h3>
+        <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">CJ PG Developer Portal</p>
       </div>
       <nav className="space-y-1">
         {menuItems.map((item) => (
