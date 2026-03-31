@@ -11,6 +11,7 @@ export interface LoginResponseData {
   tokenType: string;
   expiresAt: string;
   username: string;
+  email: string;
   role: string;
 }
 

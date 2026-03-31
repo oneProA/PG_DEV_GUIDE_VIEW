@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
 
 interface LoginDialogProps {
@@ -14,11 +15,16 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
 
   const [credentials, setCredentials] = useState({ username: '', password: '' });
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     if (user && isOpen) {
       onClose();
+      if (user.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      }
     }
-  }, [user, isOpen, onClose]);
+  }, [user, isOpen, onClose, navigate]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

@@ -5,6 +5,7 @@ const STORAGE_KEY = 'pg-dev-guide-auth';
 
 export interface AuthUser {
   username: string;
+  email: string;
   role: string;
 }
 
@@ -62,6 +63,7 @@ export const useAuthStore = create<AuthState>((set) => {
           expiresAt: response.expiresAt,
           user: {
             username: response.username,
+            email: response.email,
             role: response.role,
           },
         };

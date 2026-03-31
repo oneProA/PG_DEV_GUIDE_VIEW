@@ -10,7 +10,9 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
-  const showSidebar = location.pathname.startsWith('/api') || location.pathname.startsWith('/playground');
+  const showSidebar = location.pathname.startsWith('/api') || 
+                     location.pathname.startsWith('/playground') || 
+                     location.pathname.startsWith('/admin');
 
   return (
     <div className="flex flex-col min-h-screen">
