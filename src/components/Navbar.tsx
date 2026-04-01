@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+﻿import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import LoginDialog from './LoginDialog';
 import { useAuthStore } from '../hooks/useAuth';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
-  const [isLoginOpen, setLoginOpen] = useState(false);
-  const { user, logout } = useAuthStore((state) => ({ user: state.user, logout: state.logout }));
+  const { user, logout, isLoginOpen, setLoginOpen } = useAuthStore((state) => ({ 
+    user: state.user, 
+    logout: state.logout,
+    isLoginOpen: state.isLoginOpen,
+    setLoginOpen: state.setLoginOpen
+  }));
 
   const isActive = (path: string) => {
     if (path === '/' && location.pathname === '/') return true;
@@ -62,7 +66,7 @@ const Navbar: React.FC = () => {
             </span>
             <input 
               type="text" 
-              placeholder="문의 번호 검??.." 
+              placeholder="문의 번호 검색..." 
               className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-2xl py-2.5 pl-12 pr-4 text-sm font-medium placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
             />
           </div>
@@ -71,20 +75,9 @@ const Navbar: React.FC = () => {
 
         {/* Right: Admin Link & Auth */}
         <div className="flex items-center gap-4 shrink-0">
-          {user?.role === 'ADMIN' && !isAdminPath && (
-            <Link 
-              to="/admin/dashboard"
-              className={`${
-                isActive('/admin') ? 'text-primary' : 'text-zinc-500 hover:text-primary'
-              } text-sm font-black transition-colors px-2`}
-            >
-              Admin
-            </Link>
-          )}
-
           {user ? (
             <div className="flex items-center gap-3">
-              {!isAdminPath && (
+              {!isAdminPath && user?.role !== 'ADMIN' && (
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-4 py-2 rounded-xl shadow-sm">
                   <span className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{user.username}</span>
                 </div>
@@ -94,10 +87,9 @@ const Navbar: React.FC = () => {
                 className="text-primary hover:text-primary/80 transition-colors text-sm font-black px-2 py-2"
                 onClick={() => {
                   logout();
-                  setLoginOpen(false);
                 }}
               >
-                로그?�웃
+                로그아웃
               </button>
             </div>
           ) : (
@@ -106,7 +98,7 @@ const Navbar: React.FC = () => {
               className="bg-primary text-white px-6 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 active:scale-95"
               onClick={() => setLoginOpen(true)}
             >
-              로그??
+              로그인
             </button>
           )}
         </div>

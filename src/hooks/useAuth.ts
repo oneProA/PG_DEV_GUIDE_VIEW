@@ -18,8 +18,10 @@ interface AuthPersisted {
 interface AuthState extends AuthPersisted {
   loading: boolean;
   error?: string;
+  isLoginOpen: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => void;
+  setLoginOpen: (open: boolean) => void;
 }
 
 const readStoredState = (): AuthPersisted => {
@@ -54,6 +56,7 @@ export const useAuthStore = create<AuthState>((set) => {
     ...stored,
     loading: false,
     error: undefined,
+    isLoginOpen: false,
     login: async (payload) => {
       set({ loading: true, error: undefined });
       try {
@@ -81,5 +84,6 @@ export const useAuthStore = create<AuthState>((set) => {
       set({ token: undefined, expiresAt: undefined, user: undefined, error: undefined });
       persistState({});
     },
+    setLoginOpen: (open) => set({ isLoginOpen: open }),
   };
 });

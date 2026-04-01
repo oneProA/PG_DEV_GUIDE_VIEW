@@ -1,12 +1,38 @@
 import React from 'react';
+import { useAuthStore } from '../hooks/useAuth';
 
 const Support: React.FC = () => {
+  const { user, setLoginOpen } = useAuthStore((state) => ({
+    user: state.user,
+    setLoginOpen: state.setLoginOpen
+  }));
+
   const inquiries = [
     { id: 1, category: '기술 문의', title: 'API ?�증 ?�큰 만료 ?�슈 �?, status: '?��??�료', statusColor: 'emerald', date: '2024.05.21' },
     { id: 2, category: '결제 ?�인', title: '?�외 카드 ?�인 ?�패 ?�류 (Error_402)', status: '처리�?, statusColor: 'amber', date: '2024.05.20' },
     { id: 3, category: '기�?', title: '?�산 주기 변�??�로?�스 문의', status: '?�수?��?, statusColor: 'zinc', date: '2024.05.19' },
     { id: 4, category: '기술 문의', title: '?�훅(Webhook) 지???�상 관???�인 ?�청', status: '?��??�료', statusColor: 'emerald', date: '2024.05.15' },
   ];
+
+  if (!user) {
+    return (
+      <div className="max-w-screen-2xl mx-auto py-20 flex flex-col items-center justify-center text-center">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary mb-8 animate-bounce">
+          <span className="material-symbols-outlined text-4xl">lock</span>
+        </div>
+        <h1 className="text-3xl font-black text-on-surface mb-4 font-headline">로그인이 필요한 서비스입니다</h1>
+        <p className="text-zinc-500 text-lg max-w-md mb-10 leading-relaxed">
+          1:1 문의 내역을 확인하고 새로운 기술 지원을 요청하시려면 CJ PG 계정으로 로그인이 필요합니다.
+        </p>
+        <button 
+          onClick={() => setLoginOpen(true)}
+          className="bg-primary text-white px-10 py-4 rounded-2xl text-lg font-bold shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+        >
+          로그인하러 가기
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-screen-2xl mx-auto py-10">
