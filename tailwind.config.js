@@ -9,7 +9,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        "primary": "#b7003d",
+        "primary": "#f600a6",
         "on-tertiary": "#ffffff",
         "tertiary-container": "#b43dc8",
         "inverse-on-surface": "#f2f0f0",
@@ -20,7 +20,7 @@ export default {
         "secondary-fixed-dim": "#adc6ff",
         "on-surface-variant": "#5d3f42",
         "on-tertiary-fixed": "#35003f",
-        "on-surface": "#1b1c1c",
+        "on-surface": "#666666",
         "surface-variant": "#e4e2e2",
         "surface-container-high": "#e9e8e7",
         "on-secondary": "#ffffff",
@@ -36,7 +36,7 @@ export default {
         "surface": "#fbf9f8",
         "surface-bright": "#fbf9f8",
         "on-tertiary-fixed-variant": "#7b0090",
-        "secondary": "#0058bc",
+        "secondary": "#1a1a1a",
         "on-primary-container": "#fff9f9",
         "outline": "#916e71",
         "surface-dim": "#dbdad9",
@@ -52,15 +52,15 @@ export default {
         "on-primary-fixed-variant": "#91002f",
         "primary-fixed": "#ffdadc",
         "outline-variant": "#e6bcbf",
-        "tertiary": "#971bad",
-        "on-background": "#1b1c1c",
+        "tertiary": "#ff4d00",
+        "on-background": "#666666",
         "primary-container": "#e5004f",
         "on-secondary-fixed-variant": "#004493"
       },
       fontFamily: {
-        "headline": ["Plus Jakarta Sans"],
-        "body": ["Plus Jakarta Sans"],
-        "label": ["Plus Jakarta Sans"]
+        "headline": ["Plus Jakarta Sans", "sans-serif"],
+        "body": ["Inter", "sans-serif"],
+        "label": ["Inter", "sans-serif"]
       },
       borderRadius: {
         "DEFAULT": "0.25rem",

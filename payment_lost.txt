@@ -1,0 +1,137 @@
+﻿import React from 'react';
+
+const PaymentDoc: React.FC = () => {
+  return (
+    <div className="max-w-5xl">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="bg-primary/10 text-primary px-3 py-1 rounded text-[10px] font-bold tracking-widest uppercase italic">Standard API</span>
+            <span className="text-zinc-400 text-sm">v1.2.0</span>
+          </div>
+          <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-on-surface font-headline leading-tight">寃곗젣?섍린</h1>
+          <p className="text-lg text-zinc-600 max-w-2xl leading-relaxed">
+            ?듯빀 寃곗젣李쎌쓣 ?몄텧?섍린 ?꾪븳 ?ъ쟾 以鍮??④퀎?낅땲?? 寃곗젣 湲덉븸, ?곹뭹紐? 由щ떎?대젆??URL ?깆쓣 ?꾨떖?섏뿬 **寃곗젣 吏꾩엯??URL**??諛쒓툒諛쏆뒿?덈떎.
+          </p>
+        </div>
+        <button className="bg-primary text-white px-6 py-3 rounded-lg font-bold flex items-center gap-2 shadow-lg hover:bg-[#b7003d] transition-all scale-100 active:scale-95">
+          <span className="material-symbols-outlined">play_circle</span>
+          API ?뚯뒪???꾧뎄濡??대룞
+        </button>
+      </div>
+
+      {/* API Definition Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <div className="lg:col-span-12">
+          <div className="bg-surface-container-low rounded-xl p-6 flex items-center gap-4 border-none shadow-inner bg-zinc-50">
+            <span className="bg-[#0058bc] text-white px-3 py-1 rounded text-xs font-bold">POST</span>
+            <code className="text-zinc-800 font-mono text-sm">/api/pay/ready</code>
+            <button className="ml-auto text-zinc-400 hover:text-primary transition-colors">
+              <span className="material-symbols-outlined text-lg">content_copy</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Left Column: Params & Tables */}
+        <div className="lg:col-span-7 space-y-12">
+          <section>
+            <h2 className="text-2xl font-bold mb-6 text-on-surface flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-primary rounded-full"></span>
+              ?붿껌 ?뚮씪誘명꽣
+            </h2>
+            <div className="overflow-hidden rounded-xl bg-surface-container-lowest shadow-sm border border-zinc-100">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead className="bg-surface-container text-zinc-600 font-semibold">
+                  <tr>
+                    <th className="px-6 py-4">?뚮씪誘명꽣</th>
+                    <th className="px-6 py-4">???/th>
+                    <th className="px-6 py-4">?ㅻ챸</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 italic">
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">paymentMethodId</td>
+                    <td className="px-6 py-4 text-zinc-400">string</td>
+                    <td className="px-6 py-4">寃곗젣 ?섎떒 肄붾뱶 (`kakaoPay`, `tossPay`) <span className="text-error text-[10px] font-bold ml-1 uppercase tracking-tighter">Required</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">userId</td>
+                    <td className="px-6 py-4 text-zinc-400">string</td>
+                    <td className="px-6 py-4">媛留뱀젏 ?ъ슜??怨좎쑀 ID <span className="text-error text-[10px] font-bold ml-1 uppercase tracking-tighter">Required</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">itemName</td>
+                    <td className="px-6 py-4 text-zinc-400">string</td>
+                    <td className="px-6 py-4">寃곗젣 ?곹뭹 紐낆묶 <span className="text-error text-[10px] font-bold ml-1 uppercase tracking-tighter">Required</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">amount</td>
+                    <td className="px-6 py-4 text-zinc-400">int</td>
+                    <td className="px-6 py-4">珥?寃곗젣 湲덉븸 <span className="text-error text-[10px] font-bold ml-1 uppercase tracking-tighter">Required</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">approvalUrl</td>
+                    <td className="px-6 py-4 text-zinc-400">string</td>
+                    <td className="px-6 py-4">寃곗젣 ?깃났 ??寃곌낵瑜??꾨떖諛쏆쓣 媛留뱀젏??由щ떎?대젆??URL <span className="text-error text-[10px] font-bold ml-1 uppercase tracking-tighter">Required</span></td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 font-mono text-primary font-semibold">orderId</td>
+                    <td className="px-6 py-4 text-zinc-400">string</td>
+                    <td className="px-6 py-4">媛留뱀젏 愿由ъ슜 二쇰Ц 踰덊샇 (誘몄엯?????쒕쾭 ?먮룞 ?앹꽦)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {/* Tips Section */}
+          <section className="p-6 bg-secondary/5 rounded-xl border border-secondary/10">
+            <h4 className="text-sm font-bold text-secondary flex items-center gap-2 mb-2 italic">
+               <span className="material-symbols-outlined text-sm">lightbulb</span>
+               寃곗젣 ?곕룞 ??            </h4>
+            <p className="text-xs text-zinc-600 leading-relaxed">
+              ?ъ슜?먭? 寃곗젣瑜?留덉튇 ??媛留뱀젏??`approvalUrl`濡??ㅼ떆 ?뚯븘???? `status`, `paymentId`, `amount` ?깆쓽 ?곗씠?곌? 荑쇰━ ?뚮씪誘명꽣濡??④퍡 ?꾨떖?⑸땲?? ???뚮씪誘명꽣?ㅼ쓣 ?댁슜??寃곗젣 ?꾨즺 泥섎━瑜?吏꾪뻾?섏꽭??
+            </p>
+          </section>
+        </div>
+
+        {/* Right Column: Code & JSON */}
+        <div className="lg:col-span-5">
+          <div className="sticky top-24 space-y-6">
+            <div className="bg-inverse-surface rounded-xl overflow-hidden shadow-2xl">
+              <div className="bg-[#3e3e3f] px-4 py-2 flex items-center justify-between">
+                <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">Success Response Example</span>
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-400"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-400"></div>
+                </div>
+              </div>
+              <pre className="p-6 text-sm font-mono leading-relaxed overflow-x-auto text-zinc-300">
+                {`{
+  "next_redirect_pc_url": "https://online-pay.kakao.com/mock/...",
+  "orderId": "CJ_ORD_ABC123"
+}`}
+              </pre>
+            </div>
+            <div className="p-6 bg-zinc-900 rounded-xl border border-white/5">
+              <h4 className="text-xs font-bold text-zinc-400 flex items-center gap-2 mb-4 uppercase tracking-widest">
+                <span className="material-symbols-outlined text-sm">terminal</span>
+                cURL Sample
+              </h4>
+              <div className="bg-black/50 p-4 rounded font-mono text-[11px] text-zinc-400 break-all leading-relaxed">
+                curl -X POST /api/pay/ready \<br/>
+                &nbsp;&nbsp;-d "paymentMethodId=kakaoPay" \<br/>
+                &nbsp;&nbsp;-d "amount=15000" \<br/>
+                &nbsp;&nbsp;-d "itemName=CJ?ъ씤??異⑹쟾"
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PaymentDoc;

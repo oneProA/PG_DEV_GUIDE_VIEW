@@ -28,11 +28,11 @@ const Navbar: React.FC = () => {
         {/* Left: Logo & Main Links */}
         <div className="flex items-center gap-8 shrink-0">
           {isAdminPath ? (
-            <span className="text-xl font-black tracking-tight text-[#b7003d] dark:text-[#e5004f] cursor-default">
+            <span className="text-xl font-black tracking-tight text-primary cursor-default">
               CJ PG Developer Center
             </span>
           ) : (
-            <Link to="/" className="text-xl font-black tracking-tight text-[#b7003d] dark:text-[#e5004f] hover:opacity-80 transition-opacity">
+            <Link to="/" className="text-xl font-black tracking-tight text-primary hover:opacity-80 transition-opacity">
               CJ PG Developer Center
             </Link>
           )}

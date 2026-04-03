@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
 
@@ -70,14 +70,14 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
 
           <div className="relative z-10 space-y-4">
             <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-start gap-4">
-              <span className="material-symbols-outlined text-[#e5004f] mt-0.5">verified_user</span>
+              <span className="material-symbols-outlined text-primary mt-0.5">verified_user</span>
               <div>
                 <h4 className="font-bold text-sm text-white mb-1">강력한 2단계 인증</h4>
                 <p className="text-[10px] text-white/50">모든 관리자 로그인은 2FA 권한이 반드시 필요합니다.</p>
               </div>
             </div>
             <div className="bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 flex items-start gap-4">
-              <span className="material-symbols-outlined text-[#e5004f] mt-0.5">monitoring</span>
+              <span className="material-symbols-outlined text-primary mt-0.5">monitoring</span>
               <div>
                 <h4 className="font-bold text-sm text-white mb-1">로그 기록 및 모니터링</h4>
                 <p className="text-[10px] text-white/50">접속 IP와 모든 활동은 보안 정책에 따라 실시간 기록됩니다.</p>
@@ -138,7 +138,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
                 <input type="checkbox" className="w-4 h-4 rounded border-zinc-300 text-primary focus:ring-primary/20 cursor-pointer" />
                 <span className="text-xs font-bold text-zinc-500 group-hover:text-zinc-700 transition-colors">관리자 계정 저장</span>
               </label>
-              <button type="button" className="text-xs font-bold text-[#e5004f] hover:underline">인증 정보 분실</button>
+              <button type="button" className="text-xs font-bold text-primary hover:underline">인증 정보 분실</button>
             </div>
 
             {error && (
@@ -150,7 +150,7 @@ const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose }) => {
 
             <button
               type="submit"
-              className="w-full bg-[#e5004f] text-white py-4 rounded-2xl text-base font-black shadow-xl shadow-[#e5004f]/20 hover:bg-[#c90045] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full bg-primary text-white py-4 rounded-2xl text-base font-black shadow-xl shadow-primary/20 hover:brightness-95 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
               disabled={loading}
             >
               {loading ? '로그인 요청 중...' : (

@@ -1,11 +1,11 @@
-﻿import React from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="animate-in fade-in duration-700">
+    <div className="animate-in fade-in duration-700 bg-gradient-to-b from-[#FFF0F7] via-white to-[#FAFAFA]">
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-20 pb-32">
         <div className="max-w-screen-2xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -13,7 +13,7 @@ const Home: React.FC = () => {
             <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold mb-6 tracking-widest uppercase">Next Generation Payments</span>
             <h1 className="text-4xl md:text-[64px] font-black tracking-tight text-zinc-900 leading-[1.1] mb-8 max-w-[640px]">
               CJ PG로 결제 연동을<br/>
-              <span className="text-primary-container whitespace-nowrap">더 빠르고 안정적으로</span>
+              <span className="text-primary whitespace-nowrap">더 빠르고 안정적으로</span>
             </h1>
             <p className="text-lg text-zinc-500 leading-relaxed mb-10 max-w-xl font-medium">
               강력한 API, 철저한 샌드박스 테스트 환경, 그리고 실시간 기술 지원까지. 
@@ -38,36 +38,36 @@ const Home: React.FC = () => {
           </div>
           
           <div className="relative animate-in slide-in-from-right-8 duration-1000">
-            <div className="absolute -top-20 -right-20 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px]"></div>
-            <div className="relative bg-zinc-900 rounded-[32px] shadow-2xl p-8 border border-white/5 overflow-hidden transform lg:rotate-2 hover:rotate-0 transition-transform duration-500">
-              <div className="flex items-center gap-2 mb-6 border-b border-white/10 pb-6">
+            <div className="absolute -top-20 -right-20 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px]"></div>
+            <div className="relative bg-white/70 backdrop-blur-xl rounded-[32px] shadow-[0_8px_32px_rgba(246,0,166,0.1)] p-8 border border-white overflow-hidden transform lg:rotate-2 hover:rotate-0 transition-transform duration-500">
+              <div className="flex items-center gap-2 mb-6 border-b border-zinc-200 pb-6">
                 <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
                 <span className="ml-4 text-zinc-500 text-xs font-mono uppercase tracking-[0.2em] font-medium">payment_request.js</span>
               </div>
-              <pre className="font-mono text-sm leading-relaxed overflow-x-auto no-scrollbar">
-                <span className="text-[#c678dd]">const</span> <span className="text-[#e06c75]">cjpg</span> = <span className="text-[#e5c07b]">require</span>(<span className="text-[#98c379]">'@cj/pg-sdk'</span>);<br/><br/>
-                <span className="text-zinc-500">// Initialize client</span><br/>
-                <span className="text-[#c678dd]">const</span> client = <span style={{ color: '#d19a66' }}>new</span> <span className="text-[#e5c07b]">cjpg.Client</span>({'{'}<br/>
-                &nbsp;&nbsp;apiKey: <span className="text-[#98c379]">'cj_live_51M...'</span>,<br/>
-                &nbsp;&nbsp;secret: <span className="text-[#98c379]">'sk_test_4e...'</span><br/>
+              <pre className="font-mono text-sm leading-relaxed overflow-x-auto no-scrollbar text-zinc-700">
+                <span className="text-primary font-bold">const</span> <span className="text-zinc-900">cjpg</span> = <span className="text-primary/70">require</span>(<span className="text-tertiary">'@cj/pg-sdk'</span>);<br/><br/>
+                <span className="text-zinc-400">// Initialize client</span><br/>
+                <span className="text-primary font-bold">const</span> client = <span className="text-primary font-bold">new</span> <span className="text-zinc-900">cjpg.Client</span>({'{'}<br/>
+                &nbsp;&nbsp;apiKey: <span className="text-tertiary">'cj_live_51M...'</span>,<br/>
+                &nbsp;&nbsp;secret: <span className="text-tertiary">'sk_test_4e...'</span><br/>
                 {'}'});<br/><br/>
-                <span className="text-[#c678dd]">async function</span> <span className="text-[#61afef]">createPayment</span>() {'{'}<br/>
-                &nbsp;&nbsp;<span className="text-[#c678dd]">const</span> session = <span className="text-[#c678dd]">await</span> client.payments.<span className="text-[#61afef]">create</span>({'{'}<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;amount: <span className="text-[#d19a66]">50000</span>,<br/>
-                &nbsp;&nbsp;&nbsp;&nbsp;orderId: <span className="text-[#98c379]">'ORDER_2024_001'</span><br/>
+                <span className="text-primary font-bold">async function</span> <span className="text-primary/80">createPayment</span>() {'{'}<br/>
+                &nbsp;&nbsp;<span className="text-primary font-bold">const</span> session = <span className="text-primary font-bold">await</span> client.payments.<span className="text-primary/80">create</span>({'{'}<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;amount: <span className="text-tertiary">50000</span>,<br/>
+                &nbsp;&nbsp;&nbsp;&nbsp;orderId: <span className="text-tertiary">'ORDER_2024_001'</span><br/>
                 &nbsp;&nbsp;{'}'});<br/>
                 {'}'}
               </pre>
-              <div className="absolute bottom-6 right-8 bg-primary/20 text-primary px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">Ready to Deploy</div>
+              <div className="absolute bottom-6 right-8 bg-zinc-100 text-primary px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase">Ready to Deploy</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Bento Grid */}
-      <section className="py-24 bg-zinc-50/50">
+      <section className="py-24 bg-transparent">
         <div className="max-w-screen-2xl mx-auto px-8">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div className="animate-in slide-in-from-bottom-4 duration-700">
@@ -127,7 +127,7 @@ const Home: React.FC = () => {
             {/* Feature Card 4 */}
             <div 
               onClick={() => navigate('/playground')}
-              className="md:col-span-2 bg-gradient-to-br from-zinc-900 to-black p-10 rounded-[32px] text-white hover:shadow-2xl hover:shadow-primary/10 transition-all cursor-pointer group relative overflow-hidden"
+              className="md:col-span-2 bg-secondary p-10 rounded-[32px] text-white hover:shadow-2xl hover:shadow-primary/20 transition-all cursor-pointer group relative overflow-hidden"
             >
               <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)", backgroundSize: "32px 32px" }}></div>
               <div className="flex flex-col md:flex-row gap-12 items-center relative z-10">
