@@ -408,17 +408,10 @@ const Playground: React.FC = () => {
       });
 
       if (selectedApi.endpoint.includes('/request') && redirectUrl) {
-        setPendingRedirectUrl(
-          redirectUrl.startsWith('http') ? redirectUrl : `${API_ROOT}${redirectUrl}`,
-        );
+        const resolvedRedirectUrl = redirectUrl.startsWith('http') ? redirectUrl : `${API_ROOT}${redirectUrl}`;
+        setPendingRedirectUrl(resolvedRedirectUrl);
         setPendingPaymentMethod(paymentMethodId);
-
-        if (paymentMethodId === 'tossPay') {
-          openPaymentPopup(
-            redirectUrl.startsWith('http') ? redirectUrl : `${API_ROOT}${redirectUrl}`,
-            'pg-guide-toss-payment',
-          );
-        }
+        openPaymentPopup(resolvedRedirectUrl, `pg-guide-${paymentMethodId ?? 'payment'}`);
       } else {
         setPendingRedirectUrl(undefined);
         setPendingPaymentMethod(undefined);
@@ -580,7 +573,7 @@ const Playground: React.FC = () => {
             <div className="mt-2 text-zinc-500">문서 경로: /api/{getApiDocSlug(selectedApi)}</div>
           </div>
 
-          {pendingRedirectUrl && pendingPaymentMethod === 'kakaoPay' && (
+          {pendingRedirectUrl && (
             <button
               type="button"
               onClick={handleOpenRedirect}
