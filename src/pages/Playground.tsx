@@ -123,11 +123,11 @@ function replacePathSegments(endpoint: string, pathFields: AdminApiField[], fiel
 }
 
 function getCallbackUrl(type: CallbackResultType) {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || !API_ROOT) {
     return '';
   }
 
-  return `${window.location.origin}/playground/${type}`;
+  return `${API_ROOT}/playground/${type}`;
 }
 
 function buildFieldValueMap(
@@ -314,7 +314,15 @@ const Playground: React.FC = () => {
   };
 
   const openPaymentPopup = (url: string, popupName: string) => {
-    const popup = window.open(url, popupName, 'popup=yes,width=480,height=760');
+    const width = 480;
+    const height = 760;
+    const left = window.screenX + Math.max(0, Math.round((window.outerWidth - width) / 2));
+    const top = window.screenY + Math.max(0, Math.round((window.outerHeight - height) / 2));
+    const popup = window.open(
+      url,
+      popupName,
+      `popup=yes,width=${width},height=${height},left=${left},top=${top}`,
+    );
 
     if (!popup) {
       const blockedBody = JSON.stringify(
@@ -579,7 +587,7 @@ const Playground: React.FC = () => {
               onClick={handleOpenRedirect}
               className="relative z-10 mb-6 flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-black text-zinc-900 transition hover:bg-zinc-100"
             >
-              카카오페이 결제창 열기
+              결제창 다시 열기
               <span className="material-symbols-outlined text-base">open_in_new</span>
             </button>
           )}
