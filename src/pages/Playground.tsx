@@ -240,7 +240,12 @@ const Playground: React.FC = () => {
 
   useEffect(() => {
     const handleMessage = async (event: MessageEvent<CallbackMessagePayload>) => {
-      if (event.origin !== window.location.origin) {
+      const allowedOrigins = new Set([
+        window.location.origin,
+        new URL(API_ROOT).origin,
+      ]);
+
+      if (!allowedOrigins.has(event.origin)) {
         return;
       }
 
