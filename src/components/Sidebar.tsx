@@ -1,18 +1,56 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
+import { fetchPublicApiEntries } from '../api/docs';
+import type { AdminApiEntry } from '../api/admin';
+import { getApiDocSlug, getApiMenuIcon } from '../utils/apiDocs';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const isAdminPath = location.pathname.startsWith('/admin');
-
-  const apiMenuItems = [
-    { name: '결제하기', icon: 'payments', path: '/api/payment' },
-    { name: '취소하기', icon: 'history_toggle_off', path: '/api/cancel' },
-    { name: '결제상태조회', icon: 'manage_search', path: '/api/status' },
+  const [apiMenuItems, setApiMenuItems] = useState<Array<{ name: string; icon: string; path: string }>>([
     { name: 'API 테스트', icon: 'biotech', path: '/playground' },
-  ];
+  ]);
+
+  useEffect(() => {
+    if (isAdminPath) {
+      return;
+    }
+
+    let mounted = true;
+
+    fetchPublicApiEntries()
+      .then((entries: AdminApiEntry[]) => {
+        if (!mounted) {
+          return;
+        }
+
+        const dynamicItems = entries.map((entry) => ({
+          name: entry.name,
+          icon: getApiMenuIcon(entry),
+          path: `/api/${getApiDocSlug(entry)}`,
+        }));
+
+        setApiMenuItems([...dynamicItems, { name: 'API 테스트', icon: 'biotech', path: '/playground' }]);
+      })
+      .catch(() => {
+        if (!mounted) {
+          return;
+        }
+
+        setApiMenuItems([
+          { name: '결제 요청', icon: 'payments', path: '/api/payment' },
+          { name: '결제 취소', icon: 'history_toggle_off', path: '/api/cancel' },
+          { name: '결제 상태 조회', icon: 'manage_search', path: '/api/status' },
+          { name: 'API 테스트', icon: 'biotech', path: '/playground' },
+        ]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAdminPath]);
 
   const adminMenuItems = [
     { name: '대시보드', icon: 'dashboard', path: '/admin/dashboard' },
@@ -24,41 +62,32 @@ const Sidebar: React.FC = () => {
   const menuItems = isAdminPath ? adminMenuItems : apiMenuItems;
 
   return (
-    <aside className="h-[calc(100vh-64px)] w-60 sticky top-16 hidden md:flex flex-col border-r border-zinc-100 bg-white dark:bg-zinc-950 font-body text-sm">
-      {/* Admin Logo Area */}
-      {isAdminPath && (
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20">
+    <aside className="sticky top-16 hidden h-[calc(100vh-64px)] w-60 flex-col border-r border-zinc-100 bg-white font-body text-sm md:flex">
+      {isAdminPath ? (
+        <div className="flex items-center gap-3 p-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-xl font-black text-white shadow-lg shadow-primary/20">
             C
           </div>
           <div>
-            <h3 className="text-sm font-black text-zinc-900 dark:text-white leading-none">Admin Console</h3>
-            <p className="text-[10px] text-zinc-400 font-bold mt-1">시스템 관리자</p>
+            <h3 className="leading-none text-sm font-black text-zinc-900">Admin Console</h3>
+            <p className="mt-1 text-[10px] font-bold text-zinc-400">시스템 관리자</p>
           </div>
         </div>
-      )}
-
-      {!isAdminPath && (
+      ) : (
         <div className="p-6">
-          <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tighter">
-            API Reference
-          </h3>
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
-            CJ PG Developer Portal
-          </p>
+          <h3 className="text-lg font-black uppercase tracking-tighter text-zinc-900">API Reference</h3>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">CJ PG Developer Portal</p>
         </div>
       )}
 
-      <nav className="flex-1 px-3 space-y-1 mt-2">
+      <nav className="mt-2 flex-1 space-y-1 px-3">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 transition-all duration-200 rounded-xl ${
-                isActive
-                  ? 'text-primary bg-primary/5 font-bold'
-                  : 'text-zinc-500 hover:text-primary hover:bg-zinc-50'
+              `flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-200 ${
+                isActive ? 'bg-primary/5 font-bold text-primary' : 'text-zinc-500 hover:bg-zinc-50 hover:text-primary'
               }`
             }
           >
@@ -68,30 +97,19 @@ const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      {/* Profile / Bottom Area */}
-      <div className="p-4 border-t border-zinc-50 space-y-4">
-        {isAdminPath ? (
-          <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-2xl flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-zinc-200 overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform">
+      {isAdminPath && (
+        <div className="space-y-4 border-t border-zinc-50 p-4">
+          <div className="flex items-center gap-3 rounded-2xl bg-zinc-50 p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-200">
               <span className="material-symbols-outlined text-zinc-500">person</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-zinc-900 dark:text-white truncate">{user?.username ?? '관리자'}님</p>
-              <p className="text-[10px] text-zinc-500 truncate">{user?.email ?? 'admin@cj.net'}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-black text-zinc-900">{user?.username ?? '관리자'}</p>
+              <p className="truncate text-[10px] text-zinc-500">{user?.email ?? 'admin@cj.net'}</p>
             </div>
           </div>
-        ) : null}
-        
-        {/* Unified Bottom LNB for simple access */}
-        {!isAdminPath && (
-          <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-zinc-400 p-2">
-            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">payments</span> 결제하기</span>
-            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">history</span> 취소하기</span>
-            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">search</span> 상태조회</span>
-            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">science</span> 테스트</span>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   );
 };
