@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import type { AdminApiDetail, AdminApiField } from '../../api/admin';
 import { API_ROOT } from '../../api';
 import { fetchPublicApiDetail, fetchPublicApiEntries } from '../../api/docs';
-import { getApiDocSlug, sortFieldsByScopeAndOrder } from '../../utils/apiDocs';
+import { getApiDocSlug, sortApiEntries, sortFieldsByScopeAndOrder } from '../../utils/apiDocs';
 
 function getExampleValue(field: AdminApiField): string | number | boolean | null | Record<string, never> | [] {
   if (field.sampleValue) {
@@ -139,7 +139,7 @@ const ApiDocPage: React.FC = () => {
       setError(undefined);
 
       try {
-        const apiEntries = await fetchPublicApiEntries();
+        const apiEntries = sortApiEntries(await fetchPublicApiEntries());
         if (!mounted) {
           return;
         }

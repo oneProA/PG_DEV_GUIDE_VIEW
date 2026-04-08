@@ -16,6 +16,7 @@ interface ApiFormState {
   name: string;
   method: AdminApiEntry['method'];
   version: string;
+  displayOrder: number;
   endpoint: string;
   description: string;
 }
@@ -24,6 +25,7 @@ const EMPTY_FORM: ApiFormState = {
   name: '',
   method: 'POST',
   version: 'v1.0.0',
+  displayOrder: 1,
   endpoint: '',
   description: '',
 };
@@ -120,7 +122,10 @@ const ApiManagement: React.FC = () => {
   const openCreateForm = () => {
     setFormMode('create');
     setSelectedApiId(null);
-    setFormValues(EMPTY_FORM);
+    setFormValues({
+      ...EMPTY_FORM,
+      displayOrder: (apis.reduce((max, api) => Math.max(max, api.displayOrder), 0) || 0) + 1,
+    });
     setApiFields(EMPTY_FIELDS);
     setDetailError(undefined);
     setIsFormOpen(true);
@@ -131,6 +136,7 @@ const ApiManagement: React.FC = () => {
       name: detail.name,
       method: detail.method,
       version: detail.version,
+      displayOrder: detail.displayOrder,
       endpoint: normalizeEndpointPath(detail.endpoint),
       description: detail.description ?? '',
     });
@@ -151,6 +157,7 @@ const ApiManagement: React.FC = () => {
         name: api.name,
         method: api.method,
         version: api.version,
+        displayOrder: api.displayOrder,
         endpoint: normalizeEndpointPath(api.endpoint),
         description: api.description ?? '',
       });
@@ -232,6 +239,7 @@ const ApiManagement: React.FC = () => {
     name: formValues.name.trim(),
     method: formValues.method,
     version: formValues.version.trim(),
+    displayOrder: Math.max(1, Number(formValues.displayOrder) || 1),
     endpoint: normalizeEndpointPath(formValues.endpoint),
     description: formValues.description.trim() || undefined,
     fields: apiFields
@@ -621,7 +629,7 @@ const ApiManagement: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="px-1 text-[11px] font-black tracking-widest text-zinc-800">HTTP Method</label>
                   <div className="relative">
@@ -647,6 +655,17 @@ const ApiManagement: React.FC = () => {
                     type="text"
                     value={formValues.version}
                     onChange={(event) => handleFormChange('version', event.target.value)}
+                    className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/80 px-5 py-4 text-sm font-bold text-zinc-800 outline-none transition-colors focus:border-zinc-300"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="px-1 text-[11px] font-black tracking-widest text-zinc-800">표시 순서</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={formValues.displayOrder}
+                    onChange={(event) => handleFormChange('displayOrder', Math.max(1, Number(event.target.value) || 1))}
                     className="w-full rounded-2xl border border-zinc-100 bg-zinc-50/80 px-5 py-4 text-sm font-bold text-zinc-800 outline-none transition-colors focus:border-zinc-300"
                   />
                 </div>

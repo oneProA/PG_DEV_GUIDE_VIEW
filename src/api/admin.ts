@@ -10,6 +10,7 @@ export interface AdminApiEntry {
   endpoint: string;
   method: AdminApiHttpMethod;
   version: string;
+  displayOrder: number;
   status: AdminApiEntryStatus;
   lastModified: string;
   description?: string;
@@ -37,6 +38,7 @@ export interface SaveAdminApiRequest {
   method: AdminApiHttpMethod;
   endpoint: string;
   version: string;
+  displayOrder: number;
   status?: AdminApiEntryStatus;
   description?: string;
   fields: Array<Omit<AdminApiField, 'id'>>;

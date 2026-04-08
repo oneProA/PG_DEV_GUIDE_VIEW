@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuth';
 import { fetchPublicApiEntries } from '../api/docs';
 import type { AdminApiEntry } from '../api/admin';
-import { getApiDocSlug, getApiMenuIcon } from '../utils/apiDocs';
+import { getApiDocSlug, getApiMenuIcon, sortApiEntries } from '../utils/apiDocs';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -26,7 +26,7 @@ const Sidebar: React.FC = () => {
           return;
         }
 
-        const dynamicItems = entries.map((entry) => ({
+        const dynamicItems = sortApiEntries(entries).map((entry) => ({
           name: entry.name,
           icon: getApiMenuIcon(entry),
           path: `/api/${getApiDocSlug(entry)}`,

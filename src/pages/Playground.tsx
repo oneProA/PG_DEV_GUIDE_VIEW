@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API_ROOT } from '../api';
 import type { AdminApiDetail, AdminApiField } from '../api/admin';
 import { fetchPublicApiDetail, fetchPublicApiEntries } from '../api/docs';
-import { getApiDocSlug, sortFieldsByScopeAndOrder } from '../utils/apiDocs';
+import { getApiDocSlug, sortApiEntries, sortFieldsByScopeAndOrder } from '../utils/apiDocs';
 
 type FieldValueMap = Record<string, string>;
 type CallbackResultType = 'success' | 'cancel' | 'fail';
@@ -170,7 +170,7 @@ const Playground: React.FC = () => {
       setError(undefined);
 
       try {
-        const entries = await fetchPublicApiEntries();
+        const entries = sortApiEntries(await fetchPublicApiEntries());
         const details = await Promise.all(entries.map((entry) => fetchPublicApiDetail(entry.id)));
 
         if (!mounted) {
