@@ -79,6 +79,7 @@ export interface AdminUserDetail extends AdminUserEntry {
 
 const ADMIN_API_BASE_URL = `${API_ROOT}/admin/api`;
 const ADMIN_USERS_BASE_URL = `${API_ROOT}/admin/users`;
+const ADMIN_INQUIRIES_BASE_URL = `${API_ROOT}/admin/inquiries`;
 
 function getAccessToken(): string | null {
   try {
@@ -197,6 +198,145 @@ export async function fetchAdminUserDetail(id: string): Promise<AdminUserDetail>
   try {
     const response = await axios.get(`${ADMIN_USERS_BASE_URL}/${id}`, getAuthorizedConfig());
     return unwrapData<AdminUserDetail>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export type AdminInquiryStatus = 'RECEIVED' | 'IN_PROGRESS' | 'ANSWERED';
+
+export interface AdminInquiryEntry {
+  id: string;
+  inquiryNo: string;
+  userId: string;
+  authorName: string;
+  authorUsername: string;
+  categoryCode: string;
+  title: string;
+  preview: string;
+  status: AdminInquiryStatus;
+  hasAttachments: boolean;
+  createdAt: string;
+  updatedAt: string;
+  answeredAt?: string;
+}
+
+export interface AdminInquiryFile {
+  id: string;
+  inquiryId: string;
+  ownerType: 'INQUIRY' | 'ANSWER';
+  fileRole: 'ATTACHMENT' | 'INLINE_IMAGE';
+  originalFileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+}
+
+export interface AdminInquiryDetail extends AdminInquiryEntry {
+  contentText: string;
+  answerContentText?: string;
+  files: AdminInquiryFile[];
+}
+
+export interface AdminInquiryListResponse {
+  items: AdminInquiryEntry[];
+  page: number;
+  size: number;
+  totalCount: number;
+  totalPages: number;
+}
+
+export interface FetchAdminInquiriesParams {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  status?: AdminInquiryStatus;
+  categoryCode?: 'PAYMENT_ERROR' | 'API_INTEGRATION' | 'ACCOUNT_PERMISSION' | 'ETC';
+  fromDate?: string;
+  toDate?: string;
+}
+
+export async function fetchAdminInquiries(params: FetchAdminInquiriesParams = {}): Promise<AdminInquiryListResponse> {
+  try {
+    const response = await axios.get(ADMIN_INQUIRIES_BASE_URL, {
+      ...getAuthorizedConfig(),
+      params,
+    });
+    return unwrapData<AdminInquiryListResponse>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export async function fetchAdminInquiryDetail(id: string): Promise<AdminInquiryDetail> {
+  try {
+    const response = await axios.get(`${ADMIN_INQUIRIES_BASE_URL}/${id}`, getAuthorizedConfig());
+    return unwrapData<AdminInquiryDetail>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export async function updateAdminInquiryStatus(
+  id: string,
+  status: AdminInquiryStatus,
+): Promise<AdminInquiryEntry> {
+  try {
+    const response = await axios.patch(
+      `${ADMIN_INQUIRIES_BASE_URL}/${id}/status`,
+      { status },
+      getAuthorizedConfig(),
+    );
+    return unwrapData<AdminInquiryEntry>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export interface UpdateAdminInquiryAnswerRequest {
+  answerContentText: string;
+  status: AdminInquiryStatus;
+}
+
+export async function updateAdminInquiryAnswer(
+  id: string,
+  payload: UpdateAdminInquiryAnswerRequest,
+): Promise<AdminInquiryEntry> {
+  try {
+    const response = await axios.patch(
+      `${ADMIN_INQUIRIES_BASE_URL}/${id}/answer`,
+      payload,
+      getAuthorizedConfig(),
+    );
+    return unwrapData<AdminInquiryEntry>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export interface AdminInquiryDashboardSummary {
+  todayReceivedCount: number;
+  unhandledCount: number;
+  avgResponseMinutes: number;
+}
+
+export async function fetchAdminInquiryDashboardSummary(): Promise<AdminInquiryDashboardSummary> {
+  try {
+    const response = await axios.get(`${ADMIN_INQUIRIES_BASE_URL}/dashboard-summary`, getAuthorizedConfig());
+    return unwrapData<AdminInquiryDashboardSummary>(response.data);
+  } catch (error) {
+    throw toAdminApiError(error);
+  }
+}
+
+export async function fetchAdminInquiryDashboardUnhandled(limit = 5): Promise<AdminInquiryEntry[]> {
+  try {
+    const response = await axios.get(`${ADMIN_INQUIRIES_BASE_URL}/dashboard-unhandled`, {
+      ...getAuthorizedConfig(),
+      params: { limit },
+    });
+    return unwrapData<AdminInquiryEntry[]>(response.data);
   } catch (error) {
     throw toAdminApiError(error);
   }

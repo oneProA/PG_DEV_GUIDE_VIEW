@@ -1,220 +1,580 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  type AdminInquiryDetail,
+  type AdminInquiryEntry,
+  type AdminInquiryStatus,
+  fetchAdminInquiries,
+  fetchAdminInquiryDetail,
+  updateAdminInquiryAnswer,
+} from '../../api/admin';
 
-interface Inquiry {
-  id: string;
-  isNew: boolean;
-  isUrgent: boolean;
-  date: string;
-  title: string;
-  preview: string;
-  author: string;
-  authorId: string;
-  status: '접수' | '처리중' | '답변완료';
-  category: string;
-  content: string;
+type TabKey = 'ALL' | AdminInquiryStatus;
+type InquiryCategoryCode = 'ALL' | 'PAYMENT_ERROR' | 'API_INTEGRATION' | 'ACCOUNT_PERMISSION' | 'ETC';
+
+const PAGE_SIZE = 10;
+
+const STATUS_LABEL: Record<AdminInquiryStatus, string> = {
+  RECEIVED: '접수',
+  IN_PROGRESS: '처리중',
+  ANSWERED: '답변완료',
+};
+
+const CATEGORY_LABEL: Record<Exclude<InquiryCategoryCode, 'ALL'>, string> = {
+  PAYMENT_ERROR: '결제/승인 오류',
+  API_INTEGRATION: 'API 연동 문의',
+  ACCOUNT_PERMISSION: '계정/권한 설정',
+  ETC: '기타',
+};
+
+function formatDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, '0');
+  const d = `${date.getDate()}`.padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(dateText: string, days: number): string {
+  const date = new Date(`${dateText}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return formatDate(date);
+}
+
+function daysBetweenInclusive(fromDateText: string, toDateText: string): number {
+  const from = new Date(`${fromDateText}T00:00:00`).getTime();
+  const to = new Date(`${toDateText}T00:00:00`).getTime();
+  return Math.floor((to - from) / (24 * 60 * 60 * 1000)) + 1;
+}
+
+function getStatusClass(status: AdminInquiryStatus) {
+  if (status === 'RECEIVED') return 'bg-red-50 text-red-500';
+  if (status === 'IN_PROGRESS') return 'bg-blue-50 text-blue-500';
+  return 'bg-zinc-100 text-zinc-500';
+}
+
+function toStatusParam(tab: TabKey): AdminInquiryStatus | undefined {
+  return tab === 'ALL' ? undefined : tab;
+}
+
+function toCategoryParam(categoryCode: InquiryCategoryCode): Exclude<InquiryCategoryCode, 'ALL'> | undefined {
+  return categoryCode === 'ALL' ? undefined : categoryCode;
+}
+
+function looksLikeHtml(text: string): boolean {
+  return /<\s*[a-zA-Z][^>]*>/.test(text);
 }
 
 const InquiryManagement: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('전체');
+  const [activeTab, setActiveTab] = useState<TabKey>('RECEIVED');
+  const [selectedCategoryCode, setSelectedCategoryCode] = useState<InquiryCategoryCode>('ALL');
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [fromDate, setFromDate] = useState(() => {
+    const today = new Date();
+    const base = new Date(today);
+    base.setDate(base.getDate() - 6);
+    return formatDate(base);
+  });
+  const [toDate, setToDate] = useState(() => formatDate(new Date()));
+  const [inquiries, setInquiries] = useState<AdminInquiryEntry[]>([]);
+  const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiryDetail | null>(null);
+  const [answerDraft, setAnswerDraft] = useState('');
+  const [listLoading, setListLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [savingStatus, setSavingStatus] = useState<AdminInquiryStatus | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageTotalCount, setPageTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [allCount, setAllCount] = useState(0);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [statusCounts, setStatusCounts] = useState<Record<AdminInquiryStatus, number>>({
+    RECEIVED: 0,
+    IN_PROGRESS: 0,
+    ANSWERED: 0,
+  });
+  const isDateFilterIgnored = activeTab === 'RECEIVED' || activeTab === 'IN_PROGRESS';
 
-  const inquiries: Inquiry[] = [
-    {
-      id: '#29405',
-      isNew: true,
-      isUrgent: true,
-      date: '2024.05.24 14:20',
-      title: '결제 모듈 연동 중 403 에러 발생 문의',
-      preview: 'API Key를 발급받아 환경 변수에 설정했으나 지속적으...',
-      author: '김철수',
-      authorId: 'ks_kim',
-      status: '접수',
-      category: '기술지원 > API 연동',
-      content: '안녕하세요. CJ ONE PG 연동을 진행 중인 개발자 김철수입니다.\n현재 가이드 문서에 따라 API Key를 발급받고 헤더에 x-api-key 값을 포함하여 요청을 보내고 있습니다. 하지만 로컬 환경과 테스트 서버 모두에서 지속적으로 403 Forbidden 에러가 반환되고 있습니다. 발급받은 키의 권한 설정이나 IP 화이트리스트 등록이 필요한지 확인 부탁드립니다.',
-    },
-    {
-      id: '#29402',
-      isNew: false,
-      isUrgent: false,
-      date: '2024.05.24 11:05',
-      title: '정기 결제 API 취소 로직 문의',
-      preview: '부분 취소 시 잔액 계산 방식이 문서와 상이한 것 같습니...',
-      author: '이영희',
-      authorId: 'y_lee_dev',
-      status: '처리중',
-      category: '기술지원 > 취소/환불',
-      content: '정기 결제 구독을 취소할 때 부분 취소를 요청했는데 계산 방식이 문서와 상이합니다.',
-    },
-    {
-      id: '#29398',
-      isNew: false,
-      isUrgent: false,
-      date: '2024.05.23 16:45',
-      title: '포인트 적립 정책 확인 요청',
-      preview: 'CJ ONE 포인트 합산 시 최소 단위가 어떻게 되는지 궁금...',
-      author: '박지민',
-      authorId: 'jimin_park',
-      status: '답변완료',
-      category: '일반문의 > 정책',
-      content: 'CJ ONE 포인트 합산 시 최소 단위가 어떻게 되는지 궁금합니다.',
+  const applySelectedInquiry = (detail: AdminInquiryDetail) => {
+    setSelectedInquiry(detail);
+    setAnswerDraft(detail.answerContentText ?? '');
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      setListLoading(true);
+      setErrorMessage(null);
+
+      const keyword = searchKeyword.trim() || undefined;
+      const categoryCode = toCategoryParam(selectedCategoryCode);
+      const status = toStatusParam(activeTab);
+      const dateFrom = isDateFilterIgnored ? undefined : fromDate;
+      const dateTo = isDateFilterIgnored ? undefined : toDate;
+
+      if (!isDateFilterIgnored && dateFrom && dateTo && daysBetweenInclusive(dateFrom, dateTo) > 31) {
+        setInquiries([]);
+        setPageTotalCount(0);
+        setTotalPages(1);
+        setAllCount(0);
+        setStatusCounts({
+          RECEIVED: 0,
+          IN_PROGRESS: 0,
+          ANSWERED: 0,
+        });
+        setSelectedInquiry(null);
+        setAnswerDraft('');
+        setErrorMessage('조회 기간은 최대 31일까지 선택할 수 있습니다.');
+        setListLoading(false);
+        return;
+      }
+
+      try {
+        const [listResult, allResult, receivedResult, inProgressResult, answeredResult] = await Promise.all([
+          fetchAdminInquiries({
+            page,
+            size: PAGE_SIZE,
+            keyword,
+            status,
+            categoryCode,
+            fromDate: dateFrom,
+            toDate: dateTo,
+          }),
+          fetchAdminInquiries({
+            page: 1,
+            size: 1,
+            keyword,
+            categoryCode,
+            fromDate: dateFrom,
+            toDate: dateTo,
+          }),
+          fetchAdminInquiries({
+            page: 1,
+            size: 1,
+            keyword,
+            categoryCode,
+            status: 'RECEIVED',
+            fromDate: dateFrom,
+            toDate: dateTo,
+          }),
+          fetchAdminInquiries({
+            page: 1,
+            size: 1,
+            keyword,
+            categoryCode,
+            status: 'IN_PROGRESS',
+            fromDate: dateFrom,
+            toDate: dateTo,
+          }),
+          fetchAdminInquiries({
+            page: 1,
+            size: 1,
+            keyword,
+            categoryCode,
+            status: 'ANSWERED',
+            fromDate: dateFrom,
+            toDate: dateTo,
+          }),
+        ]);
+        if (!mounted) return;
+
+        setInquiries(listResult.items);
+        setPageTotalCount(listResult.totalCount);
+        setTotalPages(listResult.totalPages);
+
+        setAllCount(allResult.totalCount);
+        setStatusCounts({
+          RECEIVED: receivedResult.totalCount,
+          IN_PROGRESS: inProgressResult.totalCount,
+          ANSWERED: answeredResult.totalCount,
+        });
+
+        if (listResult.items.length === 0) {
+          setSelectedInquiry(null);
+          setAnswerDraft('');
+          return;
+        }
+
+        const prevId = selectedInquiry?.id;
+        const nextId =
+          prevId && listResult.items.some((item) => item.id === prevId) ? prevId : listResult.items[0].id;
+
+        setDetailLoading(true);
+        try {
+          const detail = await fetchAdminInquiryDetail(nextId);
+          if (!mounted) return;
+          applySelectedInquiry(detail);
+        } finally {
+          if (mounted) setDetailLoading(false);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        setErrorMessage(error instanceof Error ? error.message : '문의 목록을 불러오지 못했습니다.');
+      } finally {
+        if (mounted) setListLoading(false);
+      }
+    };
+
+    void run();
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab, page, searchKeyword, selectedCategoryCode, fromDate, toDate, isDateFilterIgnored, reloadTick]);
+
+  const tabs = useMemo(
+    () => [
+      { id: 'ALL' as const, label: `전체 (${allCount})` },
+      { id: 'RECEIVED' as const, label: `접수 (${statusCounts.RECEIVED})` },
+      { id: 'IN_PROGRESS' as const, label: `처리중 (${statusCounts.IN_PROGRESS})` },
+      { id: 'ANSWERED' as const, label: `답변완료 (${statusCounts.ANSWERED})` },
+    ],
+    [allCount, statusCounts.ANSWERED, statusCounts.IN_PROGRESS, statusCounts.RECEIVED],
+  );
+
+  const openInquiry = async (entry: AdminInquiryEntry) => {
+    setDetailLoading(true);
+    setErrorMessage(null);
+    try {
+      const detail = await fetchAdminInquiryDetail(entry.id);
+      applySelectedInquiry(detail);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '문의 상세를 불러오지 못했습니다.');
+    } finally {
+      setDetailLoading(false);
     }
-  ];
+  };
 
-  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry>(inquiries[0]);
+  const handleSaveAndStatus = async (status: AdminInquiryStatus) => {
+    if (!selectedInquiry) return;
+    setSavingStatus(status);
+    setErrorMessage(null);
+    try {
+      await updateAdminInquiryAnswer(selectedInquiry.id, {
+        answerContentText: answerDraft.trim(),
+        status,
+      });
+      setReloadTick((prev) => prev + 1);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '답변/상태 저장에 실패했습니다.');
+    } finally {
+      setSavingStatus(null);
+    }
+  };
+
+  const canGoPrev = page > 1;
+  const canGoNext = page < totalPages;
+  const startIndex = pageTotalCount === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const endIndex = pageTotalCount === 0 ? 0 : Math.min(page * PAGE_SIZE, pageTotalCount);
 
   return (
     <div className="flex-1 animate-in fade-in duration-500 bg-[#f9fafb] p-8 rounded-tl-3xl">
-      {/* Header */}
-      <div className="flex justify-between items-end mb-8">
-         <div>
-            <h1 className="text-2xl font-black text-zinc-900 mb-2">문의관리</h1>
-            <p className="text-sm text-zinc-500 font-medium">사용자들의 기술 지원 및 서비스 문의 사항을 관리합니다.</p>
-         </div>
-         <div className="flex items-center gap-2 bg-white rounded-full p-1 border border-zinc-200 shadow-sm">
-            {['전체', '접수', '처리중', '답변완료'].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`text-xs font-bold px-6 py-2 rounded-full transition-all ${
-                  activeTab === tab 
-                    ? 'border-primary border bg-white text-primary shadow-sm' 
-                    : 'text-zinc-500 hover:text-zinc-800'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-         </div>
+      <div className="flex flex-wrap justify-between items-end gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-black text-zinc-900 mb-2">문의관리</h1>
+          <p className="text-sm text-zinc-500 font-medium">사용자 기술 문의를 확인하고 상태를 관리합니다.</p>
+        </div>
+
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-[18px]">
+            search
+          </span>
+          <input
+            value={searchKeyword}
+            onChange={(event) => {
+              setSearchKeyword(event.target.value);
+              setPage(1);
+            }}
+            placeholder="문의 번호, 제목, 작성자 검색"
+            className="w-80 rounded-full border border-zinc-200 bg-white py-2.5 pl-10 pr-4 text-sm font-bold text-zinc-700 outline-none focus:border-primary/30"
+          />
+        </div>
       </div>
 
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 bg-white rounded-full p-1 border border-zinc-200 shadow-sm w-fit">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setPage(1);
+              }}
+              className={`text-xs font-bold px-6 py-2 rounded-full transition-all ${
+                activeTab === tab.id
+                  ? 'border-primary border bg-white text-primary shadow-sm'
+                  : 'text-zinc-500 hover:text-zinc-800'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={activeTab}
+          onChange={(event) => {
+            setActiveTab(event.target.value as TabKey);
+            setPage(1);
+          }}
+          className="md:hidden h-[36px] rounded-full border border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700 outline-none focus:border-primary/30"
+        >
+          {tabs.map((tab) => (
+            <option key={tab.id} value={tab.id}>
+              {tab.label}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={selectedCategoryCode}
+          onChange={(event) => {
+            setSelectedCategoryCode(event.target.value as InquiryCategoryCode);
+            setPage(1);
+          }}
+          className="h-[36px] rounded-full border border-zinc-200 bg-white px-4 text-xs font-bold text-zinc-700 outline-none focus:border-primary/30"
+        >
+          <option value="ALL">전체 카테고리</option>
+          <option value="PAYMENT_ERROR">결제/승인 오류</option>
+          <option value="API_INTEGRATION">API 연동 문의</option>
+          <option value="ACCOUNT_PERMISSION">계정/권한 설정</option>
+          <option value="ETC">기타</option>
+        </select>
+
+        <input
+          type="date"
+          value={fromDate}
+          disabled={isDateFilterIgnored}
+          onChange={(event) => {
+            const nextFrom = event.target.value;
+            const maxFrom = toDate;
+            const minFrom = addDays(toDate, -30);
+            if (nextFrom > maxFrom) {
+              setFromDate(maxFrom);
+            } else if (nextFrom < minFrom) {
+              setFromDate(minFrom);
+            } else {
+              setFromDate(nextFrom);
+            }
+            setPage(1);
+          }}
+          min={addDays(toDate, -30)}
+          max={toDate}
+          className={`h-[36px] rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold outline-none focus:border-primary/30 ${
+            isDateFilterIgnored ? 'text-zinc-400 bg-zinc-100 cursor-not-allowed' : 'text-zinc-700'
+          }`}
+        />
+        <span className="text-zinc-400 text-xs font-bold">~</span>
+        <input
+          type="date"
+          value={toDate}
+          disabled={isDateFilterIgnored}
+          onChange={(event) => {
+            const nextTo = event.target.value;
+            const minTo = fromDate;
+            const maxTo = addDays(fromDate, 30);
+            if (nextTo < minTo) {
+              setToDate(minTo);
+            } else if (nextTo > maxTo) {
+              setToDate(maxTo);
+            } else {
+              setToDate(nextTo);
+            }
+            setPage(1);
+          }}
+          min={fromDate}
+          max={addDays(fromDate, 30)}
+          className={`h-[36px] rounded-full border border-zinc-200 bg-white px-3 text-xs font-bold outline-none focus:border-primary/30 ${
+            isDateFilterIgnored ? 'text-zinc-400 bg-zinc-100 cursor-not-allowed' : 'text-zinc-700'
+          }`}
+        />
+        {isDateFilterIgnored ? (
+          <span className="h-[36px] inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 text-[11px] font-bold text-blue-600">
+            접수/처리중은 기간 필터 미적용 (전체 조회)
+          </span>
+        ) : null}
+      </div>
+
+      {errorMessage ? <p className="mb-4 text-sm font-bold text-red-500">{errorMessage}</p> : null}
+
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-         {/* Left List */}
-         <div className="lg:col-span-3 space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
-            {inquiries.map((inquiry) => (
-              <div 
+        <div className="lg:col-span-3 space-y-4 max-h-[800px] overflow-y-auto pr-2 custom-scrollbar">
+          {listLoading ? (
+            <div className="rounded-3xl border border-zinc-100 bg-white p-6 text-sm font-bold text-zinc-400">
+              문의 목록을 불러오는 중입니다.
+            </div>
+          ) : inquiries.length === 0 ? (
+            <div className="rounded-3xl border border-zinc-100 bg-white p-6 text-sm font-bold text-zinc-400">
+              표시할 문의가 없습니다.
+            </div>
+          ) : (
+            inquiries.map((inquiry) => (
+              <div
                 key={inquiry.id}
-                onClick={() => setSelectedInquiry(inquiry)}
+                onClick={() => void openInquiry(inquiry)}
                 className={`p-6 rounded-3xl transition-all cursor-pointer ${
-                  selectedInquiry.id === inquiry.id 
-                    ? 'bg-white border-transparent shadow-[0_8px_30px_rgb(0,0,0,0.06)]' 
+                  selectedInquiry?.id === inquiry.id
+                    ? 'bg-white border-transparent shadow-[0_8px_30px_rgb(0,0,0,0.06)]'
                     : 'bg-zinc-50 border border-zinc-100 hover:bg-white hover:border-zinc-200'
                 }`}
               >
-                 <div className="flex justify-between items-start mb-3">
-                    {inquiry.isNew ? (
-                       <span className="bg-red-50 text-red-500 text-[10px] font-black px-2 py-1.5 rounded-lg tracking-widest uppercase">NEW</span>
-                    ) : (
-                       <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">{inquiry.id}</span>
-                    )}
-                    <span className="text-[11px] font-bold text-zinc-400 tracking-widest">{inquiry.date}</span>
-                 </div>
-                 <h3 className={`font-black text-lg mb-2 leading-tight ${selectedInquiry.id === inquiry.id ? 'text-zinc-900' : 'text-zinc-700'}`}>
-                    {inquiry.title}
-                 </h3>
-                 <p className="text-xs text-zinc-500 mb-5 line-clamp-1">{inquiry.preview}</p>
-                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <div className="w-6 h-6 rounded-full bg-zinc-200"></div>
-                       <span className="text-[11px] font-bold text-zinc-600">{inquiry.author} <span className="opacity-60">({inquiry.authorId})</span></span>
-                    </div>
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${
-                        inquiry.status === '접수' ? 'bg-red-50 text-red-500' :
-                        inquiry.status === '처리중' ? 'bg-blue-50 text-blue-500' :
-                        'bg-zinc-100 text-zinc-500'
-                    }`}>
-                       {inquiry.status}
+                <div className="flex justify-between items-start mb-3">
+                  <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">{inquiry.inquiryNo}</span>
+                  <span className="text-[11px] font-bold text-zinc-400 tracking-widest">{inquiry.createdAt}</span>
+                </div>
+                <h3
+                  className={`font-black text-lg mb-2 leading-tight ${
+                    selectedInquiry?.id === inquiry.id ? 'text-zinc-900' : 'text-zinc-700'
+                  }`}
+                >
+                  {inquiry.title}
+                </h3>
+                <p className="text-xs text-zinc-500 mb-5 line-clamp-1">{inquiry.preview}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-full bg-zinc-200 shrink-0" />
+                    <span className="text-[11px] font-bold text-zinc-600 truncate">
+                      {inquiry.authorName} <span className="opacity-60">({inquiry.authorUsername})</span>
                     </span>
-                 </div>
-              </div>
-            ))}
-         </div>
-
-         {/* Right Details */}
-         <div className="lg:col-span-4 flex flex-col bg-white rounded-3xl border border-zinc-100 shadow-sm p-8 min-h-[800px] relative">
-            {/* Top Info */}
-            <div className="mb-6 flex items-center justify-between">
-               <div className="flex flex-wrap items-center gap-3">
-                  {selectedInquiry.isUrgent && (
-                     <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-1 rounded-lg tracking-widest uppercase">URGENT</span>
-                  )}
-                  <h2 className="text-2xl font-black text-zinc-900">{selectedInquiry.title}</h2>
-               </div>
-               <button className="text-zinc-400 hover:text-zinc-900 transition-colors">
-                  <span className="material-symbols-outlined">more_vert</span>
-               </button>
-            </div>
-
-            <div className="flex items-center gap-3 text-[11px] font-bold text-zinc-400 tracking-wider mb-8 pb-8 border-b border-zinc-100">
-               <span>문의 ID: {selectedInquiry.id}</span>
-               <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
-               <span>카테고리: {selectedInquiry.category}</span>
-               <span className="w-1 h-1 rounded-full bg-zinc-300"></span>
-               <span>상태: {selectedInquiry.status}</span>
-            </div>
-
-            <div className="flex-1">
-               <p className="text-sm font-medium text-zinc-700 leading-relaxed mb-6 whitespace-pre-wrap">
-                  {selectedInquiry.content}
-               </p>
-
-               {/* Code Snippet */}
-               {selectedInquiry.id === '#29405' && (
-                 <div className="bg-[#363537] rounded-2xl p-6 text-[13px] font-mono text-zinc-300 leading-relaxed overflow-x-auto shadow-inner mb-6">
-                    <span className="text-white">GET</span> /v1/payments/status HTTP/1.1<br/>
-                    Host: api.cjonepg.co.kr<br/>
-                    X-API-KEY: CJ_*******************<br/>
-                    <br/>
-                    {'{'} "error": "Forbidden", "code": 40301 {'}'}
-                 </div>
-               )}
-
-               {/* Attachment */}
-               {selectedInquiry.id === '#29405' && (
-                 <div className="flex items-center gap-2 mb-10 group cursor-pointer w-fit">
-                    <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-zinc-700 transition-colors">attach_file</span>
-                    <span className="text-[13px] font-medium text-zinc-400 italic group-hover:text-zinc-700 transition-colors">
-                       error_log_screenshot.png (1.2MB)
+                  </div>
+                  <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${getStatusClass(inquiry.status)}`}>
+                    {STATUS_LABEL[inquiry.status]}
                   </span>
-                 </div>
-               )}
-            </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
 
-            {/* Reply Section */}
-            <div className="bg-zinc-50 rounded-2xl p-6 mt-auto">
-               <div className="flex justify-between items-center mb-4">
+        <div className="lg:col-span-4 flex flex-col bg-white rounded-3xl border border-zinc-100 shadow-sm p-8 min-h-[800px]">
+          {!selectedInquiry ? (
+            <div className="h-full flex items-center justify-center text-sm font-bold text-zinc-400">
+              문의를 선택하면 상세 내용이 표시됩니다.
+            </div>
+          ) : detailLoading ? (
+            <div className="h-full flex items-center justify-center text-sm font-bold text-zinc-400">
+              문의 상세를 불러오는 중입니다.
+            </div>
+          ) : (
+            <>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <h2 className="text-2xl font-black text-zinc-900">{selectedInquiry.title}</h2>
+                <span className={`text-xs font-black px-3 py-1 rounded-md ${getStatusClass(selectedInquiry.status)}`}>
+                  {STATUS_LABEL[selectedInquiry.status]}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 text-[11px] font-bold text-zinc-400 tracking-wider mb-8 pb-8 border-b border-zinc-100">
+                <span>문의 번호: {selectedInquiry.inquiryNo}</span>
+                <span className="w-1 h-1 rounded-full bg-zinc-300" />
+                <span>
+                  카테고리:{' '}
+                  {CATEGORY_LABEL[selectedInquiry.categoryCode as Exclude<InquiryCategoryCode, 'ALL'>] ??
+                    selectedInquiry.categoryCode}
+                </span>
+                <span className="w-1 h-1 rounded-full bg-zinc-300" />
+                <span>
+                  작성자: {selectedInquiry.authorName} ({selectedInquiry.authorUsername})
+                </span>
+              </div>
+
+              <div className="flex-1">
+                {looksLikeHtml(selectedInquiry.contentText) ? (
+                  <div
+                    className="text-sm font-medium text-zinc-700 leading-relaxed mb-6 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-2"
+                    dangerouslySetInnerHTML={{ __html: selectedInquiry.contentText }}
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-zinc-700 leading-relaxed mb-6 whitespace-pre-wrap">
+                    {selectedInquiry.contentText}
+                  </p>
+                )}
+
+                {selectedInquiry.files.filter((file) => file.ownerType === 'INQUIRY' && file.fileRole === 'ATTACHMENT')
+                  .length > 0 && (
+                  <div className="mb-10 space-y-2">
+                    {selectedInquiry.files
+                      .filter((file) => file.ownerType === 'INQUIRY' && file.fileRole === 'ATTACHMENT')
+                      .map((file) => (
+                        <a
+                          key={file.id}
+                          href={file.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-2 group cursor-pointer w-fit"
+                        >
+                          <span className="material-symbols-outlined text-[18px] text-zinc-400 group-hover:text-zinc-700 transition-colors">
+                            attach_file
+                          </span>
+                          <span className="text-[13px] font-medium text-zinc-500 italic group-hover:text-zinc-700 transition-colors">
+                            {file.originalFileName}
+                          </span>
+                        </a>
+                      ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-zinc-50 rounded-2xl p-6 mt-auto">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                   <div className="flex items-center gap-2">
-                     <span className="material-symbols-outlined text-[20px] text-primary">dynamic_feed</span>
-                     <span className="font-black text-sm text-zinc-900">답변작성</span>
+                    <span className="material-symbols-outlined text-[20px] text-primary">dynamic_feed</span>
+                    <span className="font-black text-sm text-zinc-900">상태 관리</span>
                   </div>
-                  <div className="flex items-center gap-4">
-                     <div className="bg-white border border-zinc-200 rounded-lg px-3 py-1.5 flex items-center gap-4 text-xs font-bold text-zinc-500 cursor-pointer hover:border-zinc-300 shadow-sm transition-colors">
-                        템플릿 선택: 기술지원 기본
-                        <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                     </div>
-                     <button className="text-xs font-bold text-zinc-400 hover:text-zinc-600 transition-colors">초기화</button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => void handleSaveAndStatus('IN_PROGRESS')}
+                      disabled={savingStatus !== null}
+                      className="bg-blue-50 px-3 py-2 rounded-lg text-xs font-bold text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      처리중으로 변경
+                    </button>
+                    <button
+                      onClick={() => void handleSaveAndStatus('ANSWERED')}
+                      disabled={savingStatus !== null}
+                      className="bg-primary px-3 py-2 rounded-lg text-xs font-black text-white hover:brightness-95 disabled:opacity-50"
+                    >
+                      답변완료
+                    </button>
                   </div>
-               </div>
+                </div>
 
-               <textarea 
-                  className="w-full bg-white border border-zinc-200 rounded-xl p-5 text-sm outline-none focus:border-primary/50 transition-all min-h-[160px] resize-none font-medium placeholder:text-zinc-300 shadow-sm mb-4"
-                  placeholder="답변 내용을 입력하세요..."
-               ></textarea>
-               
-               <div className="flex justify-between items-center">
-                  <div className="flex gap-4 px-2">
-                     <button className="text-zinc-400 hover:text-zinc-800 transition-colors">
-                        <span className="material-symbols-outlined text-[22px]">image</span>
-                     </button>
-                     <button className="text-zinc-400 hover:text-zinc-800 transition-colors">
-                        <span className="material-symbols-outlined text-[22px]">link</span>
-                     </button>
-                  </div>
-                  <div className="flex gap-2">
-                     <button className="bg-zinc-200 px-6 py-2.5 rounded-xl text-sm font-bold text-zinc-600 hover:bg-zinc-300 transition-all active:scale-95">임시저장</button>
-                     <button className="bg-primary px-6 py-2.5 rounded-xl text-sm font-black text-white hover:brightness-95 transition-all active:scale-95 shadow-lg shadow-primary/20">답변발송</button>
-                  </div>
-               </div>
-            </div>
-         </div>
+                <textarea
+                  value={answerDraft}
+                  onChange={(event) => setAnswerDraft(event.target.value)}
+                  className="w-full bg-white border border-zinc-200 rounded-xl p-5 text-sm text-zinc-700 outline-none min-h-[120px] resize-none placeholder:text-zinc-300 shadow-sm"
+                  placeholder="답변 내용을 입력하세요."
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-start px-2 py-6 text-[11px] font-bold tracking-wider text-zinc-400">
+        <div className="flex items-center gap-2">
+          <span>
+            총 {pageTotalCount}건 중 {startIndex}-{endIndex} 표시
+          </span>
+          <button
+            type="button"
+            onClick={() => canGoPrev && setPage((prev) => prev - 1)}
+            disabled={!canGoPrev}
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-black text-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            이전
+          </button>
+          <span>
+            {page} / {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => canGoNext && setPage((prev) => prev + 1)}
+            disabled={!canGoNext}
+            className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-black text-zinc-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            다음
+          </button>
+        </div>
       </div>
     </div>
   );
