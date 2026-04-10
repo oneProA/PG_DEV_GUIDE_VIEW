@@ -1,6 +1,13 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../hooks/useAuth';
-import { createSupportInquiry, fetchMySupportInquiries, type MySupportInquiryEntry } from '../api/support';
+import {
+  createSupportInquiry,
+  fetchMySupportInquiryDetail,
+  fetchMySupportInquiries,
+  type MySupportInquiryDetail,
+  type MySupportInquiryEntry,
+  type MySupportInquiryFile,
+} from '../api/support';
 
 const CATEGORY_OPTIONS = [
   { value: 'PAYMENT_ERROR', label: '결제/승인 오류' },
@@ -47,6 +54,25 @@ function hasContent(html: string): boolean {
   return textOnly.length > 0 || hasImage;
 }
 
+function containsHtmlTag(text: string): boolean {
+  return /<\s*[a-zA-Z][^>]*>/.test(text);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function toDisplayHtml(value?: string): string {
+  if (!value) return '';
+  if (containsHtmlTag(value)) return value;
+  return escapeHtml(value).replace(/\n/g, '<br/>');
+}
+
 const Support: React.FC = () => {
   const { user, setLoginOpen } = useAuthStore();
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -61,6 +87,8 @@ const Support: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [inquiries, setInquiries] = useState<MySupportInquiryEntry[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [openedInquiryDetail, setOpenedInquiryDetail] = useState<MySupportInquiryDetail | null>(null);
 
   const sortedInquiries = useMemo(
     () =>
@@ -249,6 +277,7 @@ const Support: React.FC = () => {
         files: editorFiles.map((item) => ({ key: item.key, file: item.file })),
       });
       setSuccessMessage(`문의가 등록되었습니다. 문의번호: ${created.inquiryNo}`);
+      setCategoryCode('PAYMENT_ERROR');
       setTitle('');
       resetEditor();
       await loadInquiries();
@@ -257,6 +286,49 @@ const Support: React.FC = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openInquiryDetail = async (inquiry: MySupportInquiryEntry) => {
+    if (!user) return;
+    setDetailLoading(true);
+    setErrorMessage(null);
+    try {
+      const detail = await fetchMySupportInquiryDetail(inquiry.inquiryId, user.username);
+      setOpenedInquiryDetail(detail);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '문의 상세를 불러오지 못했습니다.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeInquiryDetail = () => {
+    setOpenedInquiryDetail(null);
+  };
+
+  const inquiryContentHtml = toDisplayHtml(openedInquiryDetail?.contentText);
+  const answerContentHtml = toDisplayHtml(openedInquiryDetail?.answerContentText);
+  const inquiryFiles = (openedInquiryDetail?.files ?? []).filter((file) => file.ownerType === 'INQUIRY');
+  const answerFiles = (openedInquiryDetail?.files ?? []).filter((file) => file.ownerType === 'ANSWER');
+
+  const renderImageGrid = (files: MySupportInquiryFile[]) => {
+    if (files.length === 0) return null;
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {files.map((file) => (
+          <a
+            key={file.fileId}
+            href={file.fileUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block rounded-xl border border-zinc-200 overflow-hidden hover:border-primary/40 transition-colors"
+          >
+            <img src={file.fileUrl} alt={file.originalFileName} className="w-full h-44 object-cover bg-zinc-100" />
+            <div className="px-3 py-2 text-[11px] font-bold text-zinc-500 truncate">{file.originalFileName}</div>
+          </a>
+        ))}
+      </div>
+    );
   };
 
   if (!user) {
@@ -309,11 +381,11 @@ const Support: React.FC = () => {
             </div>
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
                 <select
                   value={categoryCode}
                   onChange={(event) => setCategoryCode(event.target.value as MySupportInquiryEntry['categoryCode'])}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all"
+                  className="md:col-span-4 w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-white/30 transition-all"
                 >
                   {CATEGORY_OPTIONS.map((item) => (
                     <option key={item.value} value={item.value} className="text-zinc-900 bg-white">
@@ -324,7 +396,7 @@ const Support: React.FC = () => {
                 <input
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
-                  className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition-all"
+                  className="md:col-span-8 w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-white/30 transition-all"
                   placeholder="문의 제목을 입력해 주세요."
                 />
               </div>
@@ -408,7 +480,8 @@ const Support: React.FC = () => {
               {pagedInquiries.map((inquiry) => (
                 <div
                   key={inquiry.inquiryId}
-                  className="group p-5 rounded-2xl border border-zinc-50 dark:border-zinc-900 hover:border-primary/20 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50 transition-all"
+                  onDoubleClick={() => void openInquiryDetail(inquiry)}
+                  className="group p-5 rounded-2xl border border-zinc-50 dark:border-zinc-900 hover:border-primary/20 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50 transition-all cursor-pointer"
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
@@ -429,7 +502,10 @@ const Support: React.FC = () => {
                   <h4 className="font-bold text-zinc-800 dark:text-zinc-200 mb-2 group-hover:text-primary transition-colors">
                     {inquiry.title}
                   </h4>
-                  <p className="text-[11px] text-zinc-400 font-medium">{toYmdHmLabel(inquiry.createdAt)}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] text-zinc-400 font-medium">{toYmdHmLabel(inquiry.createdAt)}</p>
+                    <span className="text-[11px] text-zinc-400 font-bold">더블클릭해 상세 보기</span>
+                  </div>
                 </div>
               ))}
 
@@ -460,6 +536,82 @@ const Support: React.FC = () => {
           )}
         </div>
       </div>
+
+      {openedInquiryDetail ? (
+        <div
+          className="fixed inset-0 z-[120] bg-black/40 backdrop-blur-[1px] px-4 py-8 overflow-y-auto"
+          onClick={closeInquiryDetail}
+        >
+          <div
+            className="max-w-4xl mx-auto bg-white rounded-3xl border border-zinc-200 shadow-2xl overflow-hidden"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="px-6 py-4 border-b border-zinc-200 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-bold text-zinc-400 tracking-wider uppercase">
+                  {CATEGORY_LABEL[openedInquiryDetail.categoryCode]} · {openedInquiryDetail.inquiryNo}
+                </p>
+                <h4 className="text-lg font-black text-zinc-900 mt-1">{openedInquiryDetail.title}</h4>
+                <p className="text-xs font-medium text-zinc-500 mt-1">
+                  접수: {toYmdHmLabel(openedInquiryDetail.createdAt)}
+                  {openedInquiryDetail.answeredAt ? ` · 답변: ${toYmdHmLabel(openedInquiryDetail.answeredAt)}` : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeInquiryDetail}
+                className="shrink-0 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-600 hover:bg-zinc-50"
+              >
+                닫기
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <section>
+                <p className="text-xs font-black text-zinc-500 mb-3">문의 내용</p>
+                <div
+                  className="prose prose-sm max-w-none text-zinc-800 rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+                  dangerouslySetInnerHTML={{ __html: inquiryContentHtml }}
+                />
+                {inquiryFiles.length > 0 ? (
+                  <div className="mt-4">
+                    <p className="text-[11px] font-black text-zinc-500 mb-2">첨부/본문 이미지</p>
+                    {renderImageGrid(inquiryFiles)}
+                  </div>
+                ) : null}
+              </section>
+
+              <section>
+                <p className="text-xs font-black text-zinc-500 mb-3">답변 내용</p>
+                {openedInquiryDetail.answerContentText ? (
+                  <>
+                    <div
+                      className="prose prose-sm max-w-none text-zinc-800 rounded-2xl border border-blue-200 bg-blue-50/60 p-4"
+                      dangerouslySetInnerHTML={{ __html: answerContentHtml }}
+                    />
+                    {answerFiles.length > 0 ? (
+                      <div className="mt-4">
+                        <p className="text-[11px] font-black text-zinc-500 mb-2">답변 이미지</p>
+                        {renderImageGrid(answerFiles)}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4 text-sm font-bold text-zinc-500">
+                    아직 답변이 등록되지 않았습니다.
+                  </div>
+                )}
+              </section>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {detailLoading ? (
+        <div className="fixed right-5 bottom-5 z-[130] rounded-xl bg-zinc-900 text-white px-4 py-2 text-xs font-bold shadow-lg">
+          문의 상세를 불러오는 중...
+        </div>
+      ) : null}
     </div>
   );
 };

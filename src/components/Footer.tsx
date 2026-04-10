@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col gap-2 items-center md:items-start text-center md:text-left">
           <span className="text-lg font-black tracking-tight text-primary">CJ PG</span>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium tracking-tight">
-            © 2024 CJ PG. All rights reserved.
+            © 2026 CJ PG. All rights reserved.
           </p>
         </div>
 

@@ -297,6 +297,7 @@ export async function updateAdminInquiryStatus(
 export interface UpdateAdminInquiryAnswerRequest {
   answerContentText: string;
   status: AdminInquiryStatus;
+  files?: Array<{ key: string; file: File }>;
 }
 
 export async function updateAdminInquiryAnswer(
@@ -304,10 +305,21 @@ export async function updateAdminInquiryAnswer(
   payload: UpdateAdminInquiryAnswerRequest,
 ): Promise<AdminInquiryEntry> {
   try {
+    const authorized = getAuthorizedConfig();
+    const formData = new FormData();
+    formData.append('answerContentText', payload.answerContentText);
+    formData.append('status', payload.status);
+    (payload.files ?? []).forEach((item) => {
+      formData.append('files', item.file);
+      formData.append('fileKeys', item.key);
+    });
+
     const response = await axios.patch(
       `${ADMIN_INQUIRIES_BASE_URL}/${id}/answer`,
-      payload,
-      getAuthorizedConfig(),
+      formData,
+      {
+        ...authorized,
+      },
     );
     return unwrapData<AdminInquiryEntry>(response.data);
   } catch (error) {

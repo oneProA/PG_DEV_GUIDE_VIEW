@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import LoginDialog from './LoginDialog';
 import { useAuthStore } from '../hooks/useAuth';
@@ -59,21 +59,6 @@ const Navbar: React.FC = () => {
           )}
         </div>
 
-        {/* Center: Search Bar (Admin only) */}
-        {isAdminPath && (
-        <div className="flex-1 max-w-md hidden md:block">
-          <div className="relative group">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-lg transition-colors group-focus-within:text-primary">
-              search
-            </span>
-            <input 
-              type="text" 
-              placeholder="문의 번호 검색..." 
-              className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-2xl py-2.5 pl-12 pr-4 text-sm font-medium placeholder:text-zinc-400 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
-            />
-          </div>
-        </div>
-        )}
 
         {/* Right: Admin Link & Auth */}
         <div className="flex items-center gap-4 shrink-0">
@@ -112,3 +97,4 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
+

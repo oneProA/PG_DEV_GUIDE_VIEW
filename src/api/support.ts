@@ -12,6 +12,26 @@ export interface MySupportInquiryEntry {
   createdAt: string;
 }
 
+export interface MySupportInquiryFile {
+  fileId: string;
+  inquiryId: string;
+  ownerType: 'INQUIRY' | 'ANSWER';
+  fileRole: 'ATTACHMENT' | 'INLINE_IMAGE';
+  originalFileName: string;
+  fileUrl: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  createdAt: string;
+}
+
+export interface MySupportInquiryDetail extends MySupportInquiryEntry {
+  contentText: string;
+  answerContentText?: string;
+  updatedAt: string;
+  answeredAt?: string;
+  files: MySupportInquiryFile[];
+}
+
 export interface CreateSupportInquiryPayload {
   username: string;
   categoryCode: MySupportInquiryEntry['categoryCode'];
@@ -35,6 +55,7 @@ function unwrapData<T>(payload: unknown): T {
 }
 
 export async function createSupportInquiry(payload: CreateSupportInquiryPayload): Promise<{ inquiryNo: string }> {
+  const authorized = getAuthorizedConfig();
   const formData = new FormData();
   formData.append('username', payload.username);
   formData.append('categoryCode', payload.categoryCode);
@@ -45,13 +66,7 @@ export async function createSupportInquiry(payload: CreateSupportInquiryPayload)
     formData.append('fileKeys', item.key);
   });
 
-  const response = await axios.post(SUPPORT_BASE_URL, formData, {
-    ...getAuthorizedConfig(),
-    headers: {
-      ...(getAuthorizedConfig().headers ?? {}),
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const response = await axios.post(SUPPORT_BASE_URL, formData, authorized);
   return unwrapData<{ inquiryNo: string }>(response.data);
 }
 
@@ -61,4 +76,15 @@ export async function fetchMySupportInquiries(username: string, size = 100): Pro
     params: { username, size },
   });
   return unwrapData<MySupportInquiryEntry[]>(response.data);
+}
+
+export async function fetchMySupportInquiryDetail(
+  inquiryId: string,
+  username: string,
+): Promise<MySupportInquiryDetail> {
+  const response = await axios.get(`${SUPPORT_BASE_URL}/${inquiryId}`, {
+    ...getAuthorizedConfig(),
+    params: { username },
+  });
+  return unwrapData<MySupportInquiryDetail>(response.data);
 }

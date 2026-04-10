@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   type AdminInquiryDetail,
   type AdminInquiryEntry,
@@ -11,7 +11,15 @@ import {
 type TabKey = 'ALL' | AdminInquiryStatus;
 type InquiryCategoryCode = 'ALL' | 'PAYMENT_ERROR' | 'API_INTEGRATION' | 'ACCOUNT_PERMISSION' | 'ETC';
 
+type AnswerUploadFile = {
+  key: string;
+  file: File;
+  previewUrl: string;
+};
+
 const PAGE_SIZE = 10;
+const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png']);
 
 const STATUS_LABEL: Record<AdminInquiryStatus, string> = {
   RECEIVED: '접수',
@@ -64,6 +72,8 @@ function looksLikeHtml(text: string): boolean {
 }
 
 const InquiryManagement: React.FC = () => {
+  const answerEditorRef = useRef<HTMLDivElement | null>(null);
+
   const [activeTab, setActiveTab] = useState<TabKey>('RECEIVED');
   const [selectedCategoryCode, setSelectedCategoryCode] = useState<InquiryCategoryCode>('ALL');
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -77,6 +87,7 @@ const InquiryManagement: React.FC = () => {
   const [inquiries, setInquiries] = useState<AdminInquiryEntry[]>([]);
   const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiryDetail | null>(null);
   const [answerDraft, setAnswerDraft] = useState('');
+  const [answerFiles, setAnswerFiles] = useState<AnswerUploadFile[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [savingStatus, setSavingStatus] = useState<AdminInquiryStatus | null>(null);
@@ -96,7 +107,24 @@ const InquiryManagement: React.FC = () => {
   const applySelectedInquiry = (detail: AdminInquiryDetail) => {
     setSelectedInquiry(detail);
     setAnswerDraft(detail.answerContentText ?? '');
+    setAnswerFiles((prev) => {
+      prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      return [];
+    });
   };
+
+  useEffect(() => {
+    if (answerEditorRef.current) {
+      answerEditorRef.current.innerHTML = answerDraft;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedInquiry?.id]);
+
+  useEffect(() => {
+    return () => {
+      answerFiles.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, [answerFiles]);
 
   useEffect(() => {
     let mounted = true;
@@ -244,6 +272,101 @@ const InquiryManagement: React.FC = () => {
     }
   };
 
+  const generateFileKey = (index: number) =>
+    `answer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${index}`;
+
+  const syncAnswerContent = () => {
+    setAnswerDraft(answerEditorRef.current?.innerHTML ?? '');
+  };
+
+  const insertImageToAnswerEditor = (file: AnswerUploadFile) => {
+    const editor = answerEditorRef.current;
+    if (!editor) return;
+
+    const image = document.createElement('img');
+    image.setAttribute('src', file.previewUrl);
+    image.setAttribute('data-inline-key', file.key);
+    image.setAttribute('alt', file.file.name);
+    image.style.maxWidth = '100%';
+    image.style.borderRadius = '12px';
+    image.style.margin = '8px 0';
+    image.style.display = 'block';
+
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0 && editor.contains(selection.anchorNode)) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(image);
+      range.setStartAfter(image);
+      range.setEndAfter(image);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      editor.appendChild(image);
+    }
+
+    image.after(document.createElement('br'));
+    syncAnswerContent();
+  };
+
+  const removeImageFromAnswerEditor = (fileKey: string) => {
+    const editor = answerEditorRef.current;
+    if (!editor) return;
+    editor.querySelectorAll(`img[data-inline-key="${fileKey}"]`).forEach((node) => node.remove());
+    syncAnswerContent();
+  };
+
+  const addAnswerFilesToEditor = (selected: File[]) => {
+    if (selected.length === 0) return;
+    const validNewItems: AnswerUploadFile[] = [];
+
+    for (const file of selected) {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        setErrorMessage(`허용되지 않는 파일 형식입니다: ${file.name} (jpg, png만 가능)`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE_BYTES) {
+        setErrorMessage(`파일 크기 초과: ${file.name} (최대 10MB)`);
+        continue;
+      }
+      const key = generateFileKey(validNewItems.length);
+      const previewUrl = URL.createObjectURL(file);
+      validNewItems.push({ key, file, previewUrl });
+    }
+
+    if (validNewItems.length > 0) {
+      setErrorMessage(null);
+      setAnswerFiles((prev) => [...prev, ...validNewItems]);
+      validNewItems.forEach((item) => insertImageToAnswerEditor(item));
+    }
+  };
+
+  const handleAnswerFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(event.target.files ?? []);
+    addAnswerFilesToEditor(selected);
+    event.target.value = '';
+  };
+
+  const handleAnswerEditorPaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
+    const imageFiles = Array.from(event.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => Boolean(file));
+
+    if (imageFiles.length === 0) return;
+    event.preventDefault();
+    addAnswerFilesToEditor(imageFiles);
+  };
+
+  const handleRemoveAnswerImage = (fileKey: string) => {
+    setAnswerFiles((prev) => {
+      const target = prev.find((item) => item.key === fileKey);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((item) => item.key !== fileKey);
+    });
+    removeImageFromAnswerEditor(fileKey);
+  };
+
   const handleSaveAndStatus = async (status: AdminInquiryStatus) => {
     if (!selectedInquiry) return;
     setSavingStatus(status);
@@ -252,6 +375,11 @@ const InquiryManagement: React.FC = () => {
       await updateAdminInquiryAnswer(selectedInquiry.id, {
         answerContentText: answerDraft.trim(),
         status,
+        files: answerFiles.map((item) => ({ key: item.key, file: item.file })),
+      });
+      setAnswerFiles((prev) => {
+        prev.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        return [];
       });
       setReloadTick((prev) => prev + 1);
     } catch (error) {
@@ -473,11 +601,11 @@ const InquiryManagement: React.FC = () => {
                 </span>
                 <span className="w-1 h-1 rounded-full bg-zinc-300" />
                 <span>
-                  작성자: {selectedInquiry.authorName} ({selectedInquiry.authorUsername})
+                  작성자 {selectedInquiry.authorName} ({selectedInquiry.authorUsername})
                 </span>
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar">
                 {looksLikeHtml(selectedInquiry.contentText) ? (
                   <div
                     className="text-sm font-medium text-zinc-700 leading-relaxed mb-6 [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-2"
@@ -518,7 +646,7 @@ const InquiryManagement: React.FC = () => {
                 <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-[20px] text-primary">dynamic_feed</span>
-                    <span className="font-black text-sm text-zinc-900">상태 관리</span>
+                    <span className="font-black text-sm text-zinc-900">답변하기</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -538,12 +666,42 @@ const InquiryManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <textarea
-                  value={answerDraft}
-                  onChange={(event) => setAnswerDraft(event.target.value)}
-                  className="w-full bg-white border border-zinc-200 rounded-xl p-5 text-sm text-zinc-700 outline-none min-h-[120px] resize-none placeholder:text-zinc-300 shadow-sm"
-                  placeholder="답변 내용을 입력하세요."
-                />
+                <div className="space-y-3">
+                  <div
+                    ref={answerEditorRef}
+                    contentEditable
+                    onInput={syncAnswerContent}
+                    onPaste={handleAnswerEditorPaste}
+                    className="w-full bg-white border border-zinc-200 rounded-xl p-5 text-sm text-zinc-700 outline-none min-h-[200px] max-h-[360px] overflow-y-auto shadow-sm [&_img]:max-w-full [&_img]:rounded-xl [&_img]:my-2"
+                  />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                      multiple
+                      onChange={handleAnswerFileChange}
+                      className="text-xs text-zinc-600 file:mr-2 file:rounded-lg file:border-0 file:bg-zinc-200 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-zinc-800"
+                    />
+                  </div>
+
+                  {answerFiles.length > 0 ? (
+                    <ul className="space-y-1 text-xs text-zinc-500">
+                      {answerFiles.map((item) => (
+                        <li key={item.key} className="flex items-center justify-between gap-2">
+                          <span className="truncate">{item.file.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAnswerImage(item.key)}
+                            className="text-red-500 hover:text-red-600 font-bold"
+                          >
+                            제거
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
               </div>
             </>
           )}
